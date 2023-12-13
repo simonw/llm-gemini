@@ -1,0 +1,27 @@
+[project]
+name = "llm-gemini"
+version = "0.1a0"
+description = "LLM plugin to access Google's Gemini family of models"
+readme = "README.md"
+authors = [{name = "Simon Willison"}]
+license = {text = "Apache-2.0"}
+classifiers = [
+    "License :: OSI Approved :: Apache Software License"
+]
+dependencies = [
+    "llm",
+    "httpx",
+    "ijson"
+]
+
+[project.urls]
+Homepage = "https://github.com/simonw/llm-gemini"
+Changelog = "https://github.com/simonw/llm-gemini/releases"
+Issues = "https://github.com/simonw/llm-gemini/issues"
+CI = "https://github.com/simonw/llm-gemini/actions"
+
+[project.entry-points.llm]
+gemini = "llm_gemini"
+
+[project.optional-dependencies]
+test = ["pytest"]
