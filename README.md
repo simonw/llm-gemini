@@ -40,6 +40,8 @@ To chat interactively with the model, run `llm chat`:
 llm chat -m gemini-pro
 ```
 
+If you have access to the Gemini 1.5 Pro preview you can use `-m gemini-1.5-pro-latest` to work with that model.
+
 ## Development
 
 To set up this plugin locally, first checkout the code. Then create a new virtual environment:

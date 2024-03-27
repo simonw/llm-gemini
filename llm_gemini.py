@@ -26,28 +26,34 @@ SAFETY_SETTINGS = [
 
 @llm.hookimpl
 def register_models(register):
-    register(GeminiPro())
+    register(GeminiPro("gemini-pro"))
+    register(GeminiPro("gemini-1.5-pro-latest"))
 
 
 class GeminiPro(llm.Model):
-    model_id = "gemini-pro"
     can_stream = True
+
+    def __init__(self, model_id):
+        self.model_id = model_id
 
     def build_messages(self, prompt, conversation):
         if not conversation:
             return [{"role": "user", "parts": [{"text": prompt.prompt}]}]
         messages = []
         for response in conversation.responses:
-            messages.append({"role": "user", "parts": [{"text": response.prompt.prompt}]})
+            messages.append(
+                {"role": "user", "parts": [{"text": response.prompt.prompt}]}
+            )
             messages.append({"role": "model", "parts": [{"text": response.text()}]})
         messages.append({"role": "user", "parts": [{"text": prompt.prompt}]})
         return messages
 
     def execute(self, prompt, stream, response, conversation):
         key = llm.get_key("", "gemini", "LLM_GEMINI_KEY")
-        url = (
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:streamGenerateContent?"
-            + urllib.parse.urlencode({"key": key})
+        url = "https://generativelanguage.googleapis.com/v1beta/models/{}:streamGenerateContent?".format(
+            self.model_id
+        ) + urllib.parse.urlencode(
+            {"key": key}
         )
         gathered = []
         with httpx.stream(
