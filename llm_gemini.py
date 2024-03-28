@@ -1,3 +1,4 @@
+import base64
 import httpx
 import ijson
 import llm
@@ -32,19 +33,36 @@ def register_models(register):
 
 class GeminiPro(llm.Model):
     can_stream = True
+    supports_images = True
 
     def __init__(self, model_id):
         self.model_id = model_id
 
     def build_messages(self, prompt, conversation):
-        if not conversation:
-            return [{"role": "user", "parts": [{"text": prompt.prompt}]}]
         messages = []
-        for response in conversation.responses:
-            messages.append(
-                {"role": "user", "parts": [{"text": response.prompt.prompt}]}
-            )
-            messages.append({"role": "model", "parts": [{"text": response.text()}]})
+        if conversation:
+            for response in conversation.responses:
+                messages.append(
+                    {"role": "user", "parts": [{"text": response.prompt.prompt}]}
+                )
+                messages.append({"role": "model", "parts": [{"text": response.text()}]})
+        if prompt.images:
+            for image in prompt.images:
+                messages.append(
+                    {
+                        "role": "user",
+                        "parts": [
+                            {
+                                "inlineData": {
+                                    "mimeType": "image/jpeg",
+                                    "data": base64.b64encode(image.read()).decode(
+                                        "utf-8"
+                                    ),
+                                }
+                            }
+                        ],
+                    }
+                )
         messages.append({"role": "user", "parts": [{"text": prompt.prompt}]})
         return messages
 
