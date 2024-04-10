@@ -56,14 +56,17 @@ class GeminiPro(llm.Model):
             {"key": key}
         )
         gathered = []
+        body = {
+            "contents": self.build_messages(prompt, conversation),
+            "safetySettings": SAFETY_SETTINGS,
+        }
+        if prompt.system:
+            body["systemInstruction"] = {"parts": [{"text": prompt.system}]}
         with httpx.stream(
             "POST",
             url,
             timeout=None,
-            json={
-                "contents": self.build_messages(prompt, conversation),
-                "safetySettings": SAFETY_SETTINGS,
-            },
+            json=body,
         ) as http_response:
             events = ijson.sendable_list()
             coro = ijson.items_coro(events, "item")
