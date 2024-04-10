@@ -42,6 +42,28 @@ llm chat -m gemini-pro
 
 If you have access to the Gemini 1.5 Pro preview you can use `-m gemini-1.5-pro-latest` to work with that model.
 
+### Embeddings
+
+The plugin also adds support for the `text-embedding-004` embedding model.
+
+Run that against a single string like this:
+```bash
+llm embed -m text-embedding-004 -c 'hello world'
+```
+This returns a JSON array of 768 numbers.
+
+This command will embed every `README.md` file in child directories of the current directory and store the results in a SQLite database called `embed.db` in a collection called `readmes`:
+
+```bash
+llm embed-multi readmes --files . '*/README.md' -d embed.db -m text-embedding-004
+```
+You can then run similarity searches against that collection like this:
+```bash
+llm similar readmes -c 'upload csvs to stuff' -d embed.db
+```
+
+See the [LLM embeddings documentation](https://llm.datasette.io/en/stable/embeddings/cli.html) for further details.
+
 ## Development
 
 To set up this plugin locally, first checkout the code. Then create a new virtual environment:

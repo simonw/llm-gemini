@@ -83,3 +83,45 @@ class GeminiPro(llm.Model):
                     gathered.append(event)
                     events.clear()
         response.response_json = gathered
+
+
+@llm.hookimpl
+def register_embedding_models(register):
+    register(
+        GeminiEmbeddingModel("text-embedding-004", "text-embedding-004"),
+    )
+
+
+class GeminiEmbeddingModel(llm.EmbeddingModel):
+    needs_key = "gemini"
+    key_env_var = "LLM_GEMINI_KEY"
+    batch_size = 20
+
+    def __init__(self, model_id, gemini_model_id):
+        self.model_id = model_id
+        self.gemini_model_id = gemini_model_id
+
+    def embed_batch(self, items):
+        headers = {
+            "Content-Type": "application/json",
+        }
+        data = {
+            "requests": [
+                {
+                    "model": "models/" + self.gemini_model_id,
+                    "content": {"parts": [{"text": item}]},
+                }
+                for item in items
+            ]
+        }
+
+        with httpx.Client() as client:
+            response = client.post(
+                f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model_id}:batchEmbedContents?key={self.get_key()}",
+                headers=headers,
+                json=data,
+                timeout=None,
+            )
+
+        response.raise_for_status()
+        return [item["values"] for item in response.json()["embeddings"]]
