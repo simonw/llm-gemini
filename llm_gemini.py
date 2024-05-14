@@ -28,6 +28,7 @@ SAFETY_SETTINGS = [
 def register_models(register):
     register(GeminiPro("gemini-pro"))
     register(GeminiPro("gemini-1.5-pro-latest"))
+    register(GeminiPro("gemini-1.5-flash-latest"))
 
 
 class GeminiPro(llm.Model):
