@@ -2,6 +2,7 @@ import httpx
 import ijson
 import llm
 import urllib.parse
+from pydantic import BaseModel
 
 # We disable all of these to avoid random unexpected errors
 SAFETY_SETTINGS = [
@@ -34,6 +35,21 @@ def register_models(register):
 class GeminiPro(llm.Model):
     can_stream = True
 
+    class Options(BaseModel):
+        """
+            some generation_config parameters 
+            complete list https://ai.google.dev/api/python/google/generativeai/types/GenerationConfig
+        """
+        max_output_tokens: int = 1024
+        temperature: float = 1.0 
+        top_p: int = 1
+        top_k: int = 32
+
+        model_config = {
+                "extra": 'forbid'
+        }
+
+
     def __init__(self, model_id):
         self.model_id = model_id
 
@@ -60,6 +76,7 @@ class GeminiPro(llm.Model):
         body = {
             "contents": self.build_messages(prompt, conversation),
             "safetySettings": SAFETY_SETTINGS,
+            "generation_config": dict(prompt.options)
         }
         if prompt.system:
             body["systemInstruction"] = {"parts": [{"text": prompt.system}]}
