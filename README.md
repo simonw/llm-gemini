@@ -15,7 +15,7 @@ llm install llm-gemini
 ```
 ## Usage
 
-Configure the model by setting a key called "gemini" to your [API key](https://ai.google.dev/):
+Configure the model by setting a key called "gemini" to your [API key](https://aistudio.google.com/app/apikey):
 
 ```bash
 llm keys set gemini
