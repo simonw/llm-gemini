@@ -33,6 +33,8 @@ def register_models(register):
     register(GeminiPro("gemini-1.5-flash-001"))
     register(GeminiPro("gemini-1.5-pro-002"))
     register(GeminiPro("gemini-1.5-flash-002"))
+    register(GeminiPro("gemini-1.5-flash-8b-latest"))
+    register(GeminiPro("gemini-1.5-flash-8b-001"))
 
 
 class GeminiPro(llm.Model):
