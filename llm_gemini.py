@@ -38,6 +38,8 @@ def register_models(register):
 
 
 class GeminiPro(llm.Model):
+    needs_key = "gemini"
+    key_env_var = "LLM_GEMINI_KEY"
     can_stream = True
 
     def __init__(self, model_id):
@@ -56,7 +58,7 @@ class GeminiPro(llm.Model):
         return messages
 
     def execute(self, prompt, stream, response, conversation):
-        key = llm.get_key("", "gemini", "LLM_GEMINI_KEY")
+        key = self.get_key()
         url = "https://generativelanguage.googleapis.com/v1beta/models/{}:streamGenerateContent?".format(
             self.model_id
         ) + urllib.parse.urlencode(
