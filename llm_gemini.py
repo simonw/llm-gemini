@@ -37,6 +37,14 @@ def register_models(register):
     register(GeminiPro("gemini-1.5-flash-8b-001"))
 
 
+def resolve_type(attachment):
+    mime_type = attachment.resolve_type()
+    # https://github.com/simonw/llm/issues/587#issuecomment-2439785140
+    if mime_type == "audio/mpeg":
+        mime_type = "audio/mp3"
+    return mime_type
+
+
 class GeminiPro(llm.Model):
     can_stream = True
 
@@ -76,17 +84,24 @@ class GeminiPro(llm.Model):
         messages = []
         if conversation:
             for response in conversation.responses:
-                messages.append(
-                    {"role": "user", "parts": [{"text": response.prompt.prompt}]}
-                )
+                parts = []
+                for attachment in response.attachments:
+                    mime_type = resolve_type(attachment)
+                    parts.append(
+                        {
+                            "inlineData": {
+                                "data": attachment.base64_content(),
+                                "mimeType": mime_type,
+                            }
+                        }
+                    )
+                parts.append({"text": response.prompt.prompt})
+                messages.append({"role": "user", "parts": parts})
                 messages.append({"role": "model", "parts": [{"text": response.text()}]})
 
         parts = [{"text": prompt.prompt}]
         for attachment in prompt.attachments:
-            mime_type = attachment.resolve_type()
-            if mime_type == "audio/mpeg":
-                # https://github.com/simonw/llm/issues/587#issuecomment-2439785140
-                mime_type = "audio/mp3"
+            mime_type = resolve_type(attachment)
             parts.append(
                 {
                     "inlineData": {
