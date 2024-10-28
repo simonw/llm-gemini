@@ -24,23 +24,39 @@ llm keys set gemini
 <paste key here>
 ```
 
-Now run the model using `-m gemini-pro`, for example:
+Now run the model using `-m gemini-1.5-pro-latest`, for example:
 
 ```bash
-llm -m gemini-pro "A joke about a pelican and a walrus"
+llm -m gemini-1.5-pro-latest "A joke about a pelican and a walrus"
 ```
 
-> Why did the pelican get mad at the walrus?
+> A pelican walks into a seafood restaurant with a huge fish hanging out of its beak.  The walrus, sitting at the bar, eyes it enviously.
 >
-> Because he called him a hippo-crit.
+> "Hey," the walrus says, "That looks delicious! What kind of fish is that?"
+>
+> The pelican taps its beak thoughtfully. "I believe," it says, "it's a billfish."
 
 To chat interactively with the model, run `llm chat`:
 
 ```bash
-llm chat -m gemini-pro
+llm chat -m gemini-1.5-pro-latest
 ```
 
-If you have access to the Gemini 1.5 Pro preview you can use `-m gemini-1.5-pro-latest` to work with that model.
+Other models are:
+
+- `gemini-1.5-flash-latest`
+- gemini-1.5-flash-8b-latest` - the least expensive
+
+Gemini models are multi-modal. You can provide images, audio or video files as input like this:
+
+```bash
+llm -m gemini-1.5-flash-latest 'extract text' -a image.jpg
+```
+Or with a URL:
+```bash
+llm -m gemini-1.5-flash-8b-latest 'describe image' \
+  -a https://static.simonwillison.net/static/2024/pelicans.jpg
+```
 
 ### Embeddings
 
