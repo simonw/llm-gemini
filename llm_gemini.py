@@ -37,22 +37,81 @@ def register_models(register):
     register(GeminiPro("gemini-1.5-flash-8b-001"))
 
 
+def resolve_type(attachment):
+    mime_type = attachment.resolve_type()
+    # https://github.com/simonw/llm/issues/587#issuecomment-2439785140
+    if mime_type == "audio/mpeg":
+        mime_type = "audio/mp3"
+    return mime_type
+
+
 class GeminiPro(llm.Model):
     can_stream = True
+
+    attachment_types = (
+        # PDF
+        "application/pdf",
+        # Images
+        "image/png",
+        "image/jpeg",
+        "image/webp",
+        "image/heic",
+        "image/heif",
+        # Audio
+        "audio/wav",
+        "audio/mp3",
+        "audio/aiff",
+        "audio/aac",
+        "audio/ogg",
+        "audio/flac",
+        "audio/mpeg",  # Treated as audio/mp3
+        # Video
+        "video/mp4",
+        "video/mpeg",
+        "video/mov",
+        "video/avi",
+        "video/x-flv",
+        "video/mpg",
+        "video/webm",
+        "video/wmv",
+        "video/3gpp",
+    )
 
     def __init__(self, model_id):
         self.model_id = model_id
 
     def build_messages(self, prompt, conversation):
-        if not conversation:
-            return [{"role": "user", "parts": [{"text": prompt.prompt}]}]
         messages = []
-        for response in conversation.responses:
-            messages.append(
-                {"role": "user", "parts": [{"text": response.prompt.prompt}]}
+        if conversation:
+            for response in conversation.responses:
+                parts = []
+                for attachment in response.attachments:
+                    mime_type = resolve_type(attachment)
+                    parts.append(
+                        {
+                            "inlineData": {
+                                "data": attachment.base64_content(),
+                                "mimeType": mime_type,
+                            }
+                        }
+                    )
+                parts.append({"text": response.prompt.prompt})
+                messages.append({"role": "user", "parts": parts})
+                messages.append({"role": "model", "parts": [{"text": response.text()}]})
+
+        parts = [{"text": prompt.prompt}]
+        for attachment in prompt.attachments:
+            mime_type = resolve_type(attachment)
+            parts.append(
+                {
+                    "inlineData": {
+                        "data": attachment.base64_content(),
+                        "mimeType": mime_type,
+                    }
+                }
             )
-            messages.append({"role": "model", "parts": [{"text": response.text()}]})
-        messages.append({"role": "user", "parts": [{"text": prompt.prompt}]})
+
+        messages.append({"role": "user", "parts": parts})
         return messages
 
     def execute(self, prompt, stream, response, conversation):
