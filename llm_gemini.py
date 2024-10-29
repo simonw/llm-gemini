@@ -1,6 +1,9 @@
 import httpx
 import ijson
 import llm
+from pydantic import Field
+from typing import Optional
+
 import urllib.parse
 
 # We disable all of these to avoid random unexpected errors
@@ -79,6 +82,29 @@ class GeminiPro(llm.Model):
         "video/3gpp",
     )
 
+    class Options(llm.Options):
+        temperature: Optional[float] = Field(
+            description="Controls the randomness of the output. Use higher values for more creative responses, and lower values for more deterministic responses.",
+            default=None,
+            ge=0.0,
+            le=2.0,
+        )
+        max_output_tokens: Optional[int] = Field(
+            description="Sets the maximum number of tokens to include in a candidate.",
+            default=None,
+        )
+        top_p: Optional[float] = Field(
+            description="Changes how the model selects tokens for output. Tokens are selected from the most to least probable until the sum of their probabilities equals the topP value.",
+            default=None,
+            ge=0.0,
+            le=1.0,
+        )
+        top_k: Optional[int] = Field(
+            description="Changes how the model selects tokens for output. A topK of 1 means the selected token is the most probable among all the tokens in the model's vocabulary, while a topK of 3 means that the next token is selected from among the 3 most probable using the temperature.",
+            default=None,
+            ge=1,
+        )
+
     def __init__(self, model_id):
         self.model_id = model_id
 
@@ -130,6 +156,24 @@ class GeminiPro(llm.Model):
         }
         if prompt.system:
             body["systemInstruction"] = {"parts": [{"text": prompt.system}]}
+
+        config_map = {
+            "temperature": "temperature",
+            "max_output_tokens": "maxOutputTokens",
+            "top_p": "topP",
+            "top_k": "topK",
+        }
+        # If any of those are set in prompt.options...
+        if any(
+            getattr(prompt.options, key, None) is not None for key in config_map.keys()
+        ):
+            generation_config = {}
+            for key, other_key in config_map.items():
+                config_value = getattr(prompt.options, key, None)
+                if config_value is not None:
+                    generation_config[other_key] = config_value
+            body["generationConfig"] = generation_config
+
         with httpx.stream(
             "POST",
             url,
