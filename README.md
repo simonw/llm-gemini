@@ -59,6 +59,7 @@ And video:
 ```bash
 llm -m gemini-1.5-pro-latest 'describe what happens' -a video.mp4
 ```
+The Gemini prompting guide includes [extensive advice](https://ai.google.dev/gemini-api/docs/file-prompting-strategies) on multi-modal prompting.
 
 ## Code execution
 
