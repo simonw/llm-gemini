@@ -36,16 +36,7 @@ llm -m gemini-1.5-pro-latest "A joke about a pelican and a walrus"
 >
 > The pelican taps its beak thoughtfully. "I believe," it says, "it's a billfish."
 
-To chat interactively with the model, run `llm chat`:
-
-```bash
-llm chat -m gemini-1.5-pro-latest
-```
-
-Other models are:
-
-- `gemini-1.5-flash-latest`
-- gemini-1.5-flash-8b-latest` - the least expensive
+### Images, audio and video
 
 Gemini models are multi-modal. You can provide images, audio or video files as input like this:
 
@@ -57,6 +48,42 @@ Or with a URL:
 llm -m gemini-1.5-flash-8b-latest 'describe image' \
   -a https://static.simonwillison.net/static/2024/pelicans.jpg
 ```
+Audio works too:
+
+```bash
+llm -m gemini-1.5-pro-latest 'transcribe audio' -a audio.mp3
+```
+
+And video:
+
+```bash
+llm -m gemini-1.5-pro-latest 'describe what happens' -a video.mp4
+```
+
+## Code execution
+
+Gemini models can [write and execute code](https://ai.google.dev/gemini-api/docs/code-execution) - they can decide to write Python code, execute it in a secure sandbox and use the result as part of their response.
+
+To enable this feature, use `-o code_execution 1`:
+
+```bash
+llm -m gemini-1.5-pro-latest -o code_execution 1 \
+'use python to calculate (factorial of 13) * 3'
+```
+
+### Chat
+
+To chat interactively with the model, run `llm chat`:
+
+```bash
+llm chat -m gemini-1.5-pro-latest
+```
+
+Other models are:
+
+- `gemini-1.5-flash-latest`
+- gemini-1.5-flash-8b-latest` - the least expensive
+
 
 ### Embeddings
 
