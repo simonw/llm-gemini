@@ -83,6 +83,10 @@ class GeminiPro(llm.Model):
     )
 
     class Options(llm.Options):
+        code_execution: Optional[bool] = Field(
+            description="Enables the model to generate and run Python code",
+            default=None,
+        )
         temperature: Optional[float] = Field(
             description="Controls the randomness of the output. Use higher values for more creative responses, and lower values for more deterministic responses.",
             default=None,
@@ -154,6 +158,8 @@ class GeminiPro(llm.Model):
             "contents": self.build_messages(prompt, conversation),
             "safetySettings": SAFETY_SETTINGS,
         }
+        if prompt.options and prompt.options.code_execution:
+            body["tools"] = [{"codeExecution": {}}]
         if prompt.system:
             body["systemInstruction"] = {"parts": [{"text": prompt.system}]}
 
@@ -189,7 +195,12 @@ class GeminiPro(llm.Model):
                     if isinstance(event, dict) and "error" in event:
                         raise llm.ModelError(event["error"]["message"])
                     try:
-                        yield event["candidates"][0]["content"]["parts"][0]["text"]
+                        part = event["candidates"][0]["content"]["parts"][0]
+                        if "text" in part:
+                            yield part["text"]
+                        elif "executableCode" in part:
+                            # For code_execution
+                            yield f'```{part["executableCode"]["language"].lower()}\n{part["executableCode"]["code"].strip()}\n```\n'
                     except KeyError:
                         yield ""
                     gathered.append(event)
