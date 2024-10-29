@@ -201,6 +201,9 @@ class GeminiPro(llm.Model):
                         elif "executableCode" in part:
                             # For code_execution
                             yield f'```{part["executableCode"]["language"].lower()}\n{part["executableCode"]["code"].strip()}\n```\n'
+                        elif "codeExecutionResult" in part:
+                            # For code_execution
+                            yield f'```\n{part["codeExecutionResult"]["output"].strip()}\n```\n'
                     except KeyError:
                         yield ""
                     gathered.append(event)
