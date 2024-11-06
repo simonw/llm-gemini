@@ -127,11 +127,14 @@ class GeminiPro(llm.Model):
                             }
                         }
                     )
-                parts.append({"text": response.prompt.prompt})
+                if response.prompt.prompt:
+                    parts.append({"text": response.prompt.prompt})
                 messages.append({"role": "user", "parts": parts})
                 messages.append({"role": "model", "parts": [{"text": response.text()}]})
 
-        parts = [{"text": prompt.prompt}]
+        parts = []
+        if prompt.prompt:
+            parts.append({"text": prompt.prompt})
         for attachment in prompt.attachments:
             mime_type = resolve_type(attachment)
             parts.append(
