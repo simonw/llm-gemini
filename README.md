@@ -16,15 +16,13 @@ llm install llm-gemini
 ## Usage
 
 Configure the model by setting a key called "gemini" to your [API key](https://aistudio.google.com/app/apikey):
-
-You can set the API key using the command below, or by assigning it to the environment variable `LLM_GEMINI_KEY`.
-
 ```bash
 llm keys set gemini
 ```
 ```
 <paste key here>
 ```
+You can also set the API key by assigning it to the environment variable `LLM_GEMINI_KEY`.
 
 Now run the model using `-m gemini-pro`, for example:
 
