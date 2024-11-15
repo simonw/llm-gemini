@@ -38,7 +38,7 @@ def register_models(register):
     register(GeminiPro("gemini-1.5-flash-002"))
     register(GeminiPro("gemini-1.5-flash-8b-latest"))
     register(GeminiPro("gemini-1.5-flash-8b-001"))
-
+    register(GeminiPro("gemini-exp-1114"))
 
 def resolve_type(attachment):
     mime_type = attachment.resolve_type()
