@@ -4,9 +4,7 @@ import llm
 from pydantic import Field
 from typing import Optional
 
-import urllib.parse
-
-# We disable all of these to avoid random unexpected errors
+# We keep the same safety settings
 SAFETY_SETTINGS = [
     {
         "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
@@ -29,16 +27,20 @@ SAFETY_SETTINGS = [
 
 @llm.hookimpl
 def register_models(register):
-    register(GeminiPro("gemini-pro"))
-    register(GeminiPro("gemini-1.5-pro-latest"))
-    register(GeminiPro("gemini-1.5-flash-latest"))
-    register(GeminiPro("gemini-1.5-pro-001"))
-    register(GeminiPro("gemini-1.5-flash-001"))
-    register(GeminiPro("gemini-1.5-pro-002"))
-    register(GeminiPro("gemini-1.5-flash-002"))
-    register(GeminiPro("gemini-1.5-flash-8b-latest"))
-    register(GeminiPro("gemini-1.5-flash-8b-001"))
-    register(GeminiPro("gemini-exp-1114"))
+    # Register both sync and async versions of each model
+    for model_id in [
+        "gemini-pro",
+        "gemini-1.5-pro-latest",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-pro-001",
+        "gemini-1.5-flash-001",
+        "gemini-1.5-pro-002",
+        "gemini-1.5-flash-002",
+        "gemini-1.5-flash-8b-latest",
+        "gemini-1.5-flash-8b-001",
+        "gemini-exp-1114",
+    ]:
+        register(GeminiPro(model_id), AsyncGeminiPro(model_id))
 
 
 def resolve_type(attachment):
@@ -49,7 +51,7 @@ def resolve_type(attachment):
     return mime_type
 
 
-class GeminiPro(llm.Model):
+class _SharedGemini:
     needs_key = "gemini"
     key_env_var = "LLM_GEMINI_KEY"
     can_stream = True
@@ -106,7 +108,7 @@ class GeminiPro(llm.Model):
             le=1.0,
         )
         top_k: Optional[int] = Field(
-            description="Changes how the model selects tokens for output. A topK of 1 means the selected token is the most probable among all the tokens in the model's vocabulary, while a topK of 3 means that the next token is selected from among the 3 most probable using the temperature.",
+            description="Changes how the model selects tokens for output. A topK of 1 means the selected token is the most probable among all the tokens in the model's vocabulary.",
             default=None,
             ge=1,
         )
@@ -155,10 +157,7 @@ class GeminiPro(llm.Model):
         messages.append({"role": "user", "parts": parts})
         return messages
 
-    def execute(self, prompt, stream, response, conversation):
-        key = self.get_key()
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_id}:streamGenerateContent"
-        gathered = []
+    def build_request_body(self, prompt, conversation):
         body = {
             "contents": self.build_messages(prompt, conversation),
             "safetySettings": SAFETY_SETTINGS,
@@ -177,7 +176,6 @@ class GeminiPro(llm.Model):
         if prompt.options and prompt.options.json_object:
             body["generationConfig"] = {"response_mime_type": "application/json"}
 
-        # If any of those are set in prompt.options...
         if any(
             getattr(prompt.options, key, None) is not None for key in config_map.keys()
         ):
@@ -187,6 +185,25 @@ class GeminiPro(llm.Model):
                 if config_value is not None:
                     generation_config[other_key] = config_value
             body["generationConfig"] = generation_config
+
+        return body
+
+    def process_part(self, part):
+        if "text" in part:
+            return part["text"]
+        elif "executableCode" in part:
+            return f'```{part["executableCode"]["language"].lower()}\n{part["executableCode"]["code"].strip()}\n```\n'
+        elif "codeExecutionResult" in part:
+            return f'```\n{part["codeExecutionResult"]["output"].strip()}\n```\n'
+        return ""
+
+
+class GeminiPro(_SharedGemini, llm.Model):
+    def execute(self, prompt, stream, response, conversation):
+        key = self.get_key()
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_id}:streamGenerateContent"
+        gathered = []
+        body = self.build_request_body(prompt, conversation)
 
         with httpx.stream(
             "POST",
@@ -205,18 +222,44 @@ class GeminiPro(llm.Model):
                         raise llm.ModelError(event["error"]["message"])
                     try:
                         part = event["candidates"][0]["content"]["parts"][0]
-                        if "text" in part:
-                            yield part["text"]
-                        elif "executableCode" in part:
-                            # For code_execution
-                            yield f'```{part["executableCode"]["language"].lower()}\n{part["executableCode"]["code"].strip()}\n```\n'
-                        elif "codeExecutionResult" in part:
-                            # For code_execution
-                            yield f'```\n{part["codeExecutionResult"]["output"].strip()}\n```\n'
+                        yield self.process_part(part)
                     except KeyError:
                         yield ""
                     gathered.append(event)
                     events.clear()
+        response.response_json = gathered
+
+
+class AsyncGeminiPro(_SharedGemini, llm.AsyncModel):
+    async def execute(self, prompt, stream, response, conversation):
+        key = self.get_key()
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_id}:streamGenerateContent"
+        gathered = []
+        body = self.build_request_body(prompt, conversation)
+
+        async with httpx.AsyncClient() as client:
+            async with client.stream(
+                "POST",
+                url,
+                timeout=None,
+                headers={"x-goog-api-key": key},
+                json=body,
+            ) as http_response:
+                events = ijson.sendable_list()
+                coro = ijson.items_coro(events, "item")
+                async for chunk in http_response.aiter_bytes():
+                    coro.send(chunk)
+                    if events:
+                        event = events[0]
+                        if isinstance(event, dict) and "error" in event:
+                            raise llm.ModelError(event["error"]["message"])
+                        try:
+                            part = event["candidates"][0]["content"]["parts"][0]
+                            yield self.process_part(part)
+                        except KeyError:
+                            yield ""
+                        gathered.append(event)
+                        events.clear()
         response.response_json = gathered
 
 
