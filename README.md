@@ -137,3 +137,16 @@ To run the tests:
 ```bash
 pytest
 ```
+
+This project uses [pytest-recording](https://github.com/kiwicom/pytest-recording) to record Gemini API responses for the tests.
+
+If you add a new test that calls the API you can capture the API response like this:
+```bash
+PYTEST_GEMINI_API_KEY="$(llm keys get gemini)" pytest --record-mode once
+```
+You will need to have stored a valid Gemini API key using this command first:
+```bash
+llm keys set gemini
+# Paste key here
+```
+
