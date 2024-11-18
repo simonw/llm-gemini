@@ -109,6 +109,10 @@ class GeminiPro(llm.Model):
             default=None,
             ge=1,
         )
+        json_object: Optional[bool] = Field(
+            description="Output a valid JSON object {...}",
+            default=None,
+        )
 
     def __init__(self, model_id):
         self.model_id = model_id
@@ -173,6 +177,9 @@ class GeminiPro(llm.Model):
             "top_p": "topP",
             "top_k": "topK",
         }
+        if prompt.options and prompt.options.json_object:
+            body["generationConfig"] = {"response_mime_type": "application/json"}
+
         # If any of those are set in prompt.options...
         if any(
             getattr(prompt.options, key, None) is not None for key in config_map.keys()

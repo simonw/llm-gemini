@@ -61,6 +61,19 @@ llm -m gemini-1.5-pro-latest 'describe what happens' -a video.mp4
 ```
 The Gemini prompting guide includes [extensive advice](https://ai.google.dev/gemini-api/docs/file-prompting-strategies) on multi-modal prompting.
 
+## JSON output
+
+Use `-o json_object 1` to force the output to be JSON:
+
+```bash
+llm -m gemini-1.5-flash-latest -o json_object 1 \
+  '3 largest cities in California, list of {"name": "..."}'
+```
+Outputs:
+```json
+{"cities": [{"name": "Los Angeles"}, {"name": "San Diego"}, {"name": "San Jose"}]}
+```
+
 ## Code execution
 
 Gemini models can [write and execute code](https://ai.google.dev/gemini-api/docs/code-execution) - they can decide to write Python code, execute it in a secure sandbox and use the result as part of their response.
