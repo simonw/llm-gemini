@@ -4,7 +4,6 @@ import llm
 from pydantic import Field
 from typing import Optional
 
-# We keep the same safety settings
 SAFETY_SETTINGS = [
     {
         "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
@@ -92,7 +91,11 @@ class _SharedGemini:
             default=None,
         )
         temperature: Optional[float] = Field(
-            description="Controls the randomness of the output. Use higher values for more creative responses, and lower values for more deterministic responses.",
+            description=(
+                "Controls the randomness of the output. Use higher values for "
+                "more creative responses, and lower values for more "
+                "deterministic responses."
+            ),
             default=None,
             ge=0.0,
             le=2.0,
@@ -102,13 +105,23 @@ class _SharedGemini:
             default=None,
         )
         top_p: Optional[float] = Field(
-            description="Changes how the model selects tokens for output. Tokens are selected from the most to least probable until the sum of their probabilities equals the topP value.",
+            description=(
+                "Changes how the model selects tokens for output. Tokens are "
+                "selected from the most to least probable until the sum of "
+                "their probabilities equals the topP value."
+            ),
             default=None,
             ge=0.0,
             le=1.0,
         )
         top_k: Optional[int] = Field(
-            description="Changes how the model selects tokens for output. A topK of 1 means the selected token is the most probable among all the tokens in the model's vocabulary.",
+            description=(
+                "Changes how the model selects tokens for output. A topK of 1 "
+                "means the selected token is the most probable among all the "
+                "tokens in the model's vocabulary, while a topK of 3 means "
+                "that the next token is selected from among the 3 most "
+                "probable using the temperature."
+            ),
             default=None,
             ge=1,
         )
