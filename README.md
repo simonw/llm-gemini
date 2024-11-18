@@ -36,6 +36,12 @@ llm -m gemini-1.5-pro-latest "A joke about a pelican and a walrus"
 >
 > The pelican taps its beak thoughtfully. "I believe," it says, "it's a billfish."
 
+Other models are:
+
+- `gemini-1.5-flash-latest`
+- `gemini-1.5-flash-8b-latest` - the least expensive
+- `gemini-exp-1114` - recent experimental
+
 ### Images, audio and video
 
 Gemini models are multi-modal. You can provide images, audio or video files as input like this:
@@ -92,12 +98,6 @@ To chat interactively with the model, run `llm chat`:
 ```bash
 llm chat -m gemini-1.5-pro-latest
 ```
-
-Other models are:
-
-- `gemini-1.5-flash-latest`
-- gemini-1.5-flash-8b-latest` - the least expensive
-
 
 ## Embeddings
 
