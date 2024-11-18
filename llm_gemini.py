@@ -40,6 +40,7 @@ def register_models(register):
     register(GeminiPro("gemini-1.5-flash-8b-001"))
     register(GeminiPro("gemini-exp-1114"))
 
+
 def resolve_type(attachment):
     mime_type = attachment.resolve_type()
     # https://github.com/simonw/llm/issues/587#issuecomment-2439785140
@@ -156,11 +157,7 @@ class GeminiPro(llm.Model):
 
     def execute(self, prompt, stream, response, conversation):
         key = self.get_key()
-        url = "https://generativelanguage.googleapis.com/v1beta/models/{}:streamGenerateContent?".format(
-            self.model_id
-        ) + urllib.parse.urlencode(
-            {"key": key}
-        )
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_id}:streamGenerateContent"
         gathered = []
         body = {
             "contents": self.build_messages(prompt, conversation),
@@ -195,6 +192,7 @@ class GeminiPro(llm.Model):
             "POST",
             url,
             timeout=None,
+            headers={"x-goog-api-key": key},
             json=body,
         ) as http_response:
             events = ijson.sendable_list()
@@ -241,6 +239,7 @@ class GeminiEmbeddingModel(llm.EmbeddingModel):
     def embed_batch(self, items):
         headers = {
             "Content-Type": "application/json",
+            "x-goog-api-key": self.get_key(),
         }
         data = {
             "requests": [
@@ -254,7 +253,7 @@ class GeminiEmbeddingModel(llm.EmbeddingModel):
 
         with httpx.Client() as client:
             response = client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model_id}:batchEmbedContents?key={self.get_key()}",
+                f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model_id}:batchEmbedContents",
                 headers=headers,
                 json=data,
                 timeout=None,
