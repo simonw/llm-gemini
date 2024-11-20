@@ -17,10 +17,15 @@ async def test_prompt():
             "candidates": [
                 {"content": {"parts": [{"text": "Percy"}], "role": "model"}}
             ],
-            "usageMetadata": {"promptTokenCount": 10, "totalTokenCount": 10},
             "modelVersion": "gemini-1.5-flash-002",
         }
     ]
+    assert response.token_details is None
+    assert response.input_tokens == 10
+    # Not sure why our pytest-recording setup doesn't report output tokens
+    # https://github.com/simonw/llm-gemini/issues/25#issuecomment-2487464339
+    assert response.output_tokens is None
+
     # And try it async too
     async_model = llm.get_async_model("gemini-1.5-flash-latest")
     async_model.key = async_model.key or GEMINI_API_KEY

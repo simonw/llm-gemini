@@ -210,6 +210,19 @@ class _SharedGemini:
             return f'```\n{part["codeExecutionResult"]["output"].strip()}\n```\n'
         return ""
 
+    def set_usage(self, response):
+        try:
+            usage = response.response_json[-1].pop("usageMetadata")
+            input_tokens = usage.pop("promptTokenCount", None)
+            output_tokens = usage.pop("candidatesTokenCount", None)
+            usage.pop("totalTokenCount", None)
+            if input_tokens is not None:
+                response.set_usage(
+                    input=input_tokens, output=output_tokens, details=usage or None
+                )
+        except (IndexError, KeyError):
+            pass
+
 
 class GeminiPro(_SharedGemini, llm.Model):
     def execute(self, prompt, stream, response, conversation):
@@ -241,6 +254,7 @@ class GeminiPro(_SharedGemini, llm.Model):
                     gathered.append(event)
                     events.clear()
         response.response_json = gathered
+        self.set_usage(response)
 
 
 class AsyncGeminiPro(_SharedGemini, llm.AsyncModel):
@@ -274,6 +288,7 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncModel):
                         gathered.append(event)
                         events.clear()
         response.response_json = gathered
+        self.set_usage(response)
 
 
 @llm.hookimpl
