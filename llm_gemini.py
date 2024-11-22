@@ -38,6 +38,7 @@ def register_models(register):
         "gemini-1.5-flash-8b-latest",
         "gemini-1.5-flash-8b-001",
         "gemini-exp-1114",
+        "gemini-exp-1121",
     ]:
         register(GeminiPro(model_id), AsyncGeminiPro(model_id))
 
