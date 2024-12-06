@@ -42,6 +42,7 @@ Other models are:
 - `gemini-1.5-flash-8b-latest` - the least expensive
 - `gemini-exp-1114` - recent experimental #1
 - `gemini-exp-1121` - recent experimental #2
+- `gemini-exp-1206` - recent experimental #3
 
 ### Images, audio and video
 
