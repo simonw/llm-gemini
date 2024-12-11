@@ -43,6 +43,7 @@ Other models are:
 - `gemini-exp-1114` - recent experimental #1
 - `gemini-exp-1121` - recent experimental #2
 - `gemini-exp-1206` - recent experimental #3
+- `gemini-2.0-flash-exp` - [Gemini 2.0 Flash](https://blog.google/technology/google-deepmind/google-gemini-ai-update-december-2024/#gemini-2-0-flash)
 
 ### Images, audio and video
 
