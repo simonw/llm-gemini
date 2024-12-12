@@ -93,6 +93,10 @@ class _SharedGemini:
             description="Enables the model to generate and run Python code",
             default=None,
         )
+        grounding: Optional[bool] = Field(
+            description="Enables the model to use Google Search to improve the accuracy and recency of responses from the model",
+            default=None,
+        )
         temperature: Optional[float] = Field(
             description=(
                 "Controls the randomness of the output. Use higher values for "
@@ -180,6 +184,8 @@ class _SharedGemini:
         }
         if prompt.options and prompt.options.code_execution:
             body["tools"] = [{"codeExecution": {}}]
+        if prompt.options and prompt.options.grounding:
+            body["tools"] = [{"google_search": {}}]
         if prompt.system:
             body["systemInstruction"] = {"parts": [{"text": prompt.system}]}
 
