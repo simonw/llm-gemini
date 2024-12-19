@@ -53,7 +53,7 @@ def resolve_type(attachment):
     return mime_type
 
 
-class _SharedGemini:
+class _SharedGeminiBase:
     needs_key = "gemini"
     key_env_var = "LLM_GEMINI_KEY"
     can_stream = True
@@ -129,53 +129,15 @@ class _SharedGemini:
             ge=1,
         )
         json_object: Optional[bool] = Field(
-            description="Output a valid JSON object {...}",
-            default=None,
+            description="Output a valid JSON object {...}", default=None,
         )
 
     def __init__(self, model_id):
         self.model_id = model_id
 
-    def build_messages(self, prompt, conversation):
-        messages = []
-        if conversation:
-            for response in conversation.responses:
-                parts = []
-                for attachment in response.attachments:
-                    mime_type = resolve_type(attachment)
-                    parts.append(
-                        {
-                            "inlineData": {
-                                "data": attachment.base64_content(),
-                                "mimeType": mime_type,
-                            }
-                        }
-                    )
-                if response.prompt.prompt:
-                    parts.append({"text": response.prompt.prompt})
-                messages.append({"role": "user", "parts": parts})
-                messages.append({"role": "model", "parts": [{"text": response.text()}]})
-
-        parts = []
-        if prompt.prompt:
-            parts.append({"text": prompt.prompt})
-        for attachment in prompt.attachments:
-            mime_type = resolve_type(attachment)
-            parts.append(
-                {
-                    "inlineData": {
-                        "data": attachment.base64_content(),
-                        "mimeType": mime_type,
-                    }
-                }
-            )
-
-        messages.append({"role": "user", "parts": parts})
-        return messages
-
-    def build_request_body(self, prompt, conversation):
+    def build_request_body(self, prompt, messages):
         body = {
-            "contents": self.build_messages(prompt, conversation),
+            "contents": messages,
             "safetySettings": SAFETY_SETTINGS,
         }
         if prompt.options and prompt.options.code_execution:
@@ -227,19 +189,96 @@ class _SharedGemini:
             pass
 
 
-class GeminiPro(_SharedGemini, llm.Model):
+class _SyncGeminiMixin(_SharedGeminiBase):
+    def build_messages(self, prompt, conversation):
+        messages = []
+        if conversation:
+            for response in conversation.responses:
+                parts = []
+                for attachment in response.attachments:
+                    mime_type = resolve_type(attachment)
+                    parts.append(
+                        {
+                            "inlineData": {
+                                "data": attachment.base64_content(),
+                                "mimeType": mime_type,
+                            }
+                        }
+                    )
+                if response.prompt.prompt:
+                    parts.append({"text": response.prompt.prompt})
+                messages.append({"role": "user", "parts": parts})
+                messages.append({"role": "model", "parts": [{"text": response.text()}]})
+
+        parts = []
+        if prompt.prompt:
+            parts.append({"text": prompt.prompt})
+        for attachment in prompt.attachments:
+            mime_type = resolve_type(attachment)
+            parts.append(
+                {
+                    "inlineData": {
+                        "data": attachment.base64_content(),
+                        "mimeType": mime_type,
+                    }
+                }
+            )
+
+        messages.append({"role": "user", "parts": parts})
+        return messages
+
+
+class _AsyncGeminiMixin(_SharedGeminiBase):
+    async def build_messages(self, prompt, conversation):
+        messages = []
+        if conversation:
+            for response in conversation.responses:
+                parts = []
+                for attachment in response.attachments:
+                    mime_type = resolve_type(attachment)
+                    parts.append(
+                        {
+                            "inlineData": {
+                                "data": attachment.base64_content(),
+                                "mimeType": mime_type,
+                            }
+                        }
+                    )
+                if response.prompt.prompt:
+                    parts.append({"text": response.prompt.prompt})
+                messages.append({"role": "user", "parts": parts})
+                messages.append(
+                    {"role": "model", "parts": [{"text": await response.text()}]}
+                )
+
+        parts = []
+        if prompt.prompt:
+            parts.append({"text": prompt.prompt})
+        for attachment in prompt.attachments:
+            mime_type = resolve_type(attachment)
+            parts.append(
+                {
+                    "inlineData": {
+                        "data": attachment.base64_content(),
+                        "mimeType": mime_type,
+                    }
+                }
+            )
+
+        messages.append({"role": "user", "parts": parts})
+        return messages
+
+
+class GeminiPro(_SyncGeminiMixin, llm.Model):
     def execute(self, prompt, stream, response, conversation):
         key = self.get_key()
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_id}:streamGenerateContent"
         gathered = []
-        body = self.build_request_body(prompt, conversation)
+        messages = self.build_messages(prompt, conversation)
+        body = self.build_request_body(prompt, messages)
 
         with httpx.stream(
-            "POST",
-            url,
-            timeout=None,
-            headers={"x-goog-api-key": key},
-            json=body,
+            "POST", url, timeout=None, headers={"x-goog-api-key": key}, json=body,
         ) as http_response:
             events = ijson.sendable_list()
             coro = ijson.items_coro(events, "item")
@@ -260,20 +299,17 @@ class GeminiPro(_SharedGemini, llm.Model):
         self.set_usage(response)
 
 
-class AsyncGeminiPro(_SharedGemini, llm.AsyncModel):
+class AsyncGeminiPro(_AsyncGeminiMixin, llm.AsyncModel):
     async def execute(self, prompt, stream, response, conversation):
         key = self.get_key()
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_id}:streamGenerateContent"
         gathered = []
-        body = self.build_request_body(prompt, conversation)
+        messages = await self.build_messages(prompt, conversation)
+        body = self.build_request_body(prompt, messages)
 
         async with httpx.AsyncClient() as client:
             async with client.stream(
-                "POST",
-                url,
-                timeout=None,
-                headers={"x-goog-api-key": key},
-                json=body,
+                "POST", url, timeout=None, headers={"x-goog-api-key": key}, json=body,
             ) as http_response:
                 events = ijson.sendable_list()
                 coro = ijson.items_coro(events, "item")
