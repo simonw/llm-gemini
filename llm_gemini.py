@@ -155,7 +155,7 @@ class _SharedGemini:
                 if response.prompt.prompt:
                     parts.append({"text": response.prompt.prompt})
                 messages.append({"role": "user", "parts": parts})
-                messages.append({"role": "model", "parts": [{"text": response.text()}]})
+                messages.append({"role": "model", "parts": [{"text": response.text_or_raise()}]})
 
         parts = []
         if prompt.prompt:
