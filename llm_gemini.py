@@ -60,6 +60,9 @@ class _SharedGemini:
     can_stream = True
 
     attachment_types = (
+        # Text
+        "text/plain",
+        "text/csv",
         # PDF
         "application/pdf",
         # Images
