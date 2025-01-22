@@ -23,6 +23,17 @@ SAFETY_SETTINGS = [
     },
 ]
 
+# https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/ground-gemini#supported_models_2
+GOOGLE_SEARCH_MODELS = {
+    "gemini-1.5-pro-latest",
+    "gemini-1.5-flash-latest",
+    "gemini-1.5-pro-001",
+    "gemini-1.5-flash-001",
+    "gemini-1.5-pro-002",
+    "gemini-1.5-flash-002",
+    "gemini-2.0-flash-exp",
+}
+
 
 @llm.hookimpl
 def register_models(register):
@@ -42,7 +53,11 @@ def register_models(register):
         "gemini-exp-1206",
         "gemini-2.0-flash-exp",
     ]:
-        register(GeminiPro(model_id), AsyncGeminiPro(model_id))
+        can_google_search = model_id in GOOGLE_SEARCH_MODELS
+        register(
+            GeminiPro(model_id, can_google_search=can_google_search),
+            AsyncGeminiPro(model_id, can_google_search=can_google_search),
+        )
 
 
 def resolve_type(attachment):
@@ -93,10 +108,6 @@ class _SharedGemini:
             description="Enables the model to generate and run Python code",
             default=None,
         )
-        google_search: Optional[bool] = Field(
-            description="Enables the model to use Google Search to improve the accuracy and recency of responses from the model",
-            default=None,
-        )
         temperature: Optional[float] = Field(
             description=(
                 "Controls the randomness of the output. Use higher values for "
@@ -137,8 +148,17 @@ class _SharedGemini:
             default=None,
         )
 
-    def __init__(self, model_id):
+    class OptionsWithGoogleSearch(Options):
+        google_search: Optional[bool] = Field(
+            description="Enables the model to use Google Search to improve the accuracy and recency of responses from the model",
+            default=None,
+        )
+
+    def __init__(self, model_id, can_google_search=False):
         self.model_id = model_id
+        self.can_google_search = can_google_search
+        if can_google_search:
+            self.Options = self.OptionsWithGoogleSearch
 
     def build_messages(self, prompt, conversation):
         messages = []
@@ -184,8 +204,8 @@ class _SharedGemini:
         }
         if prompt.options and prompt.options.code_execution:
             body["tools"] = [{"codeExecution": {}}]
-        if prompt.options and prompt.options.google_search:
-            body["tools"] = [{"google_search": {}}]
+        if prompt.options and self.can_google_search and prompt.options.google_search:
+            body["tools"] = [{"google_search_retrieval": {}}]
         if prompt.system:
             body["systemInstruction"] = {"parts": [{"text": prompt.system}]}
 
