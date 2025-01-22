@@ -93,6 +93,18 @@ To enable this feature, use `-o code_execution 1`:
 llm -m gemini-1.5-pro-latest -o code_execution 1 \
 'use python to calculate (factorial of 13) * 3'
 ```
+### Google search
+
+Some Gemini models support [Grounding with Google Search](https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/ground-gemini#web-ground-gemini), where the model can run a Google search and use the results as part of answering a prompt.
+
+Using this feature may incur additional requirements in terms of how you use the results. Consult [Google's documentation](https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/ground-gemini#web-ground-gemini) for more details.
+
+To run a prompt with Google search enabled, use `-o google_search 1`:
+
+```bash
+llm -m gemini-1.5-pro-latest -o google_search 1 \
+  'What happened in Ireland today?'
+```
 
 ### Chat
 
