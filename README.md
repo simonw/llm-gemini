@@ -106,6 +106,8 @@ llm -m gemini-1.5-pro-latest -o google_search 1 \
   'What happened in Ireland today?'
 ```
 
+Use `llm logs -c --json` after running a prompt to see the full JSON response, which includes [additional information](https://github.com/simonw/llm-gemini/pull/29#issuecomment-2606201877) about grounded results.
+
 ### Chat
 
 To chat interactively with the model, run `llm chat`:
