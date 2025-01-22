@@ -53,6 +53,8 @@ def resolve_type(attachment):
     # https://github.com/simonw/llm/issues/587#issuecomment-2439785140
     if mime_type == "audio/mpeg":
         mime_type = "audio/mp3"
+    if mime_type == "application/ogg":
+        mime_type = "audio/ogg"
     return mime_type
 
 
@@ -76,6 +78,7 @@ class _SharedGemini:
         "audio/aiff",
         "audio/aac",
         "audio/ogg",
+        "application/ogg",
         "audio/flac",
         "audio/mpeg",  # Treated as audio/mp3
         # Video
