@@ -44,6 +44,7 @@ Other models are:
 - `gemini-exp-1121` - recent experimental #2
 - `gemini-exp-1206` - recent experimental #3
 - `gemini-2.0-flash-exp` - [Gemini 2.0 Flash](https://blog.google/technology/google-deepmind/google-gemini-ai-update-december-2024/#gemini-2-0-flash)
+- `learnlm-1.5-pro-experimental` - "an experimental task-specific model that has been trained to align with learning science principles" - [more details here](https://ai.google.dev/gemini-api/docs/learnlm).
 - `gemini-2.0-flash-thinking-exp-1219` - experimental "thinking" model from December 2024
 - `gemini-2.0-flash-thinking-exp-01-21` - experimental "thinking" model from January 2025
 
