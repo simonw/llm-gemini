@@ -10,6 +10,7 @@ classifiers = [
 ]
 dependencies = [
     "llm>=0.19",
+    "beautifulsoup4",
     "httpx",
     "ijson"
 ]
