@@ -1,3 +1,4 @@
+from bs4 import BeautifulSoup
 import click
 import copy
 from enum import Enum
@@ -382,6 +383,13 @@ def _resolve_refs(schema, defs, expansion_stack=None):
             _resolve_refs(item, defs, expansion_stack)
 
 
+def format_link(osc8format, title, link):
+    if osc8format:
+        return f"\x1b]8;;{link}\a{title}\x1b]8;;\a"
+    else:
+        return f"{title}: {link}"
+
+
 class _SharedGemini:
     needs_key = "gemini"
     key_env_var = "LLM_GEMINI_KEY"
@@ -478,6 +486,20 @@ class _SharedGemini:
                 Field(
                     description="Enables the model to use Google Search to improve the accuracy and recency of responses from the model",
                     default=None,
+                ),
+            )
+            extra_fields["grounding_links"] = (
+                Optional[bool],
+                Field(
+                    description="Whether to show grounding links from the response",
+                    default=True,
+                ),
+            )
+            extra_fields["format_links"] = (
+                Optional[bool],
+                Field(
+                    description="Whether to format grounding links and search recommendations with OSC 8 escape sequences",
+                    default=True,
                 ),
             )
 
@@ -824,6 +846,38 @@ class _SharedGemini:
         for part in candidates[0]["content"]["parts"]:
             yield from self.process_part(part, response)
 
+    def process_grounding(self, event, options):
+        if not options or not self.can_google_search or not options.google_search:
+            return ""
+
+        try:
+            text = ""
+            grounding = event["candidates"][0]["groundingMetadata"]
+            if options.grounding_links and grounding:
+                chunks = grounding["groundingChunks"]
+                if chunks:
+                    text += "\n\nGrounding Sources:\n"
+                    for index, chunk in enumerate(chunks):
+                        if "web" in chunk:
+                            title = chunk["web"]["title"]
+                            href = chunk["web"]["uri"]
+                            text += f"{index + 1}. {format_link(options.format_links, title, href)}\n"
+                rendered_content = grounding["searchEntryPoint"]["renderedContent"]
+                if rendered_content:
+                    soup = BeautifulSoup(rendered_content, "html.parser")
+                    links = soup.find_all("a")
+                    if links:
+                        text += f"\nGoogle Search Suggestions:\n"
+                        for link in links:
+                            title = link.string
+                            href = link["href"]
+                            text += (
+                                f"{format_link(options.format_links, title, href)}\n"
+                            )
+            return text
+        except KeyError:
+            return ""
+
     def set_usage(self, response):
         try:
             # Don't record the "content" key from that last candidate
@@ -875,6 +929,11 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
                             yield from self.process_candidates(
                                 event["candidates"], response
                             )
+                            grounding_text = self.process_grounding(
+                                event, prompt.options
+                            )
+                            if grounding_text:
+                                yield StreamEvent(type="text", chunk=grounding_text)
                         except KeyError:
                             yield StreamEvent(type="text", chunk="")
                         gathered.append(event)
@@ -912,6 +971,11 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                                     event["candidates"], response
                                 ):
                                     yield stream_event
+                                grounding_text = self.process_grounding(
+                                    event, prompt.options
+                                )
+                                if grounding_text:
+                                    yield StreamEvent(type="text", chunk=grounding_text)
                             except KeyError:
                                 yield StreamEvent(type="text", chunk="")
                             gathered.append(event)
