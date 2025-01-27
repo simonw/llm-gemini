@@ -1,8 +1,144 @@
 import httpx
 import ijson
 import llm
-from pydantic import Field
-from typing import Optional
+import yaml
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Type, Union
+from pydantic import BaseModel, create_model, Field
+
+
+def pydantic_to_gemini_schema(schema: dict) -> dict:
+    """Convert a Pydantic JSON schema to Gemini's schema format."""
+    type_mapping = {
+        "string": "STRING",
+        "integer": "INTEGER", 
+        "number": "NUMBER",
+        "boolean": "BOOLEAN",
+        "array": "ARRAY",
+        "object": "OBJECT",
+    }
+
+    def convert_property(prop, definitions=None):
+        if "$ref" in prop and definitions:
+            ref_path = prop["$ref"].split("/")[-1]
+            if ref_path in definitions:
+                return convert_property(definitions[ref_path], definitions)
+            
+        if "type" not in prop:
+            return {"type": "STRING"}  # default to string for complex types
+        
+        result = {"type": type_mapping.get(prop["type"], "STRING")}
+        
+        if prop["type"] == "array" and "items" in prop:
+            result["items"] = convert_property(prop["items"], definitions)
+        elif prop["type"] == "object" and "properties" in prop:
+            result["properties"] = {
+                k: convert_property(v, definitions) for k, v in prop["properties"].items()
+            }
+        
+        return result
+
+    schema = schema.copy()
+    definitions = schema.get("$defs") or schema.get("definitions")
+
+    if "type" in schema:
+        return convert_property(schema, definitions)
+    elif "properties" in schema:
+        # Handle root level schema
+        return {
+            "type": "OBJECT",
+            "properties": {
+                k: convert_property(v, definitions) for k, v in schema["properties"].items()
+            }
+        }
+    else:
+        raise ValueError("Invalid schema format")
+
+
+def resolve_ref(ref: str, schema_dict: Dict) -> Dict:
+    """Resolve a $ref reference in the schema."""
+    if not ref.startswith("#/"):
+        raise ValueError(f"Only local references are supported: {ref}")
+
+    path = ref[2:].split("/")
+    current = schema_dict
+    for part in path:
+        if part not in current:
+            raise ValueError(f"Invalid reference: {ref}")
+        current = current[part]
+    return current
+
+
+def create_models_from_schema(schema_dict: Dict) -> Dict[str, Type[BaseModel]]:
+    """Create all models defined in the schema."""
+    models = {}
+
+    def parse_schema_to_pydantic_model(
+        schema_dict: Dict, model_name: str = None
+    ) -> Type[BaseModel]:
+        """Parse a schema into a Pydantic model, supporting nested objects and references."""
+        # If it's a reference, resolve it
+        if isinstance(schema_dict, dict) and "$ref" in schema_dict:
+            ref_path = schema_dict["$ref"][2:].split("/")
+            if ref_path[0] in models:
+                return models[ref_path[0]]
+            referenced_schema = {
+                ref_path[0]: resolve_ref(schema_dict["$ref"], root_schema)
+            }
+            return parse_schema_to_pydantic_model(referenced_schema)
+
+        if len(schema_dict) == 1 and isinstance(next(iter(schema_dict.values())), dict):
+            model_name = next(iter(schema_dict.keys()))
+            fields_dict = next(iter(schema_dict.values()))
+
+            # Handle array type with items
+            if (
+                isinstance(fields_dict, dict)
+                and fields_dict.get("type") == "array"
+                and "items" in fields_dict
+            ):
+                item_model = parse_schema_to_pydantic_model(fields_dict["items"])
+                # Create a wrapper model for arrays to satisfy OpenAI's object requirement
+                model = create_model(model_name, items=(List[item_model], ...))
+                models[model_name] = model
+                return model
+
+            # Map string type names to actual types
+            type_mapping = {
+                "str": str,
+                "int": int,
+                "float": float,
+                "bool": bool,
+                "list": List,
+                "dict": Dict,
+            }
+
+            # Convert fields
+            fields: Dict[str, Any] = {}
+            for field_name, field_type in fields_dict.items():
+                if isinstance(field_type, dict):
+                    # Nested object
+                    nested_model = parse_schema_to_pydantic_model(
+                        field_type, field_name
+                    )
+                    fields[field_name] = (nested_model, ...)
+                elif isinstance(field_type, str):
+                    python_type = type_mapping.get(field_type, Any)
+                    fields[field_name] = (python_type, ...)
+
+            model = create_model(model_name, **fields)
+            models[model_name] = model
+            return model
+
+        return create_model(model_name or "DynamicModel", **{})
+
+    root_schema = schema_dict
+    # First pass: create all top-level models
+    for model_name, model_schema in schema_dict.items():
+        if model_name not in models:
+            parse_schema_to_pydantic_model({model_name: model_schema})
+
+    return models
 
 SAFETY_SETTINGS = [
     {
@@ -156,6 +292,14 @@ class _SharedGemini:
             description="Output a valid JSON object {...}",
             default=None,
         )
+        response_mime_type: Optional[str] = Field(
+            description="Structured response MIME type",
+            default=None,
+        )
+        response_schema: Optional[Union[dict, str]] = Field(
+            description="Path to YAML schema file or schema dict",
+            default=None,
+        )
 
     class OptionsWithGoogleSearch(Options):
         google_search: Optional[bool] = Field(
@@ -220,14 +364,52 @@ class _SharedGemini:
         if prompt.system:
             body["systemInstruction"] = {"parts": [{"text": prompt.system}]}
 
+        generation_config = {}
         config_map = {
             "temperature": "temperature",
             "max_output_tokens": "maxOutputTokens",
             "top_p": "topP",
             "top_k": "topK",
         }
-        if prompt.options and prompt.options.json_object:
-            body["generationConfig"] = {"response_mime_type": "application/json"}
+        if prompt.options:
+            if prompt.options.response_schema:
+                if isinstance(prompt.options.response_schema, str):
+                    schema_path = Path(prompt.options.response_schema)
+                    if not schema_path.exists():
+                        raise ValueError(f"Schema file not found: {schema_path}")
+                    try:
+                        with open(schema_path, "r") as f:
+                            schema = yaml.full_load(f)
+                            models = create_models_from_schema(schema)
+                            # For array types, we want the container model
+                            model_name = next(iter(schema.keys()))
+                            DynamicModel = models[model_name]
+                            pydantic_schema = DynamicModel.model_json_schema()
+                            # Add referenced models to definitions
+                            pydantic_schema["$defs"] = {
+                                k: v.model_json_schema() 
+                                for k, v in models.items() 
+                                if k != model_name
+                            }
+                            gemini_schema = pydantic_to_gemini_schema(pydantic_schema)
+                    except yaml.YAMLError as e:
+                        raise ValueError(f"Invalid YAML in schema file: {e}") from e
+                    generation_config["response_schema"] = gemini_schema
+                    generation_config["response_mime_type"] = "application/json"
+                else:
+                    generation_config["response_schema"] = (
+                        prompt.options.response_schema
+                    )
+
+            if prompt.options.response_mime_type:
+                generation_config["response_mime_type"] = (
+                    prompt.options.response_mime_type
+                )
+            elif prompt.options.json_object:
+                generation_config["response_mime_type"] = "application/json"
+
+            if generation_config:
+                body["generationConfig"] = generation_config
 
         if any(
             getattr(prompt.options, key, None) is not None for key in config_map.keys()
