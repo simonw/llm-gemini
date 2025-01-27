@@ -86,6 +86,57 @@ Outputs:
 {"cities": [{"name": "Los Angeles"}, {"name": "San Diego"}, {"name": "San Jose"}]}
 ```
 
+### Structured outputs using schemas
+
+You can use YAML schema files to enforce structured output from the model. This is more powerful than basic JSON output as it allows you to define complex types and validate the response structure.
+
+For example, we can capture a list of objects. In this case, we define an array of `Pelican` objects.
+
+```yaml
+# pelicans.yaml
+Pelicans:
+  type: array
+  items:
+    $ref: "#/Pelican"
+Pelican:
+  pelican_name: str
+  scientific_name: str
+  weight_kg_lower: double
+  weight_kg_upper: double
+```
+
+Then use it with the `response_schema` option. This works exceptionally well when combined with `curl`, `strip-tags`, and `jq`.
+
+```bash
+curl -s "https://avibirds.com/pelecanidae-pelican-bird/" | \
+  strip-tags | \
+  llm prompt \
+    -s "You will be provided a web page with various types of pelicans. Extract EXACTLY according to the schema." \
+    --model gemini-exp-1206 \
+    --option response_schema pelicans.yaml | \
+  jq
+```
+
+The model will return a JSON response that strictly adheres to your schema structure. This is particularly useful for extracting structured data from unstructured text or ensuring consistent output formats.
+
+```json
+{                                                                 
+  "items": [                                                      
+    {                                                             
+      "pelican_name": "Australian Pelican",                       
+      "scientific_name": "Pelecanus conspicillatus",              
+      "weight_kg_lower": "10",                                    
+      "weight_kg_upper": "11"                                     
+    },                                                            
+    {                                                             
+      "pelican_name": "Dalmatian Pelican",                        
+      "scientific_name": "Pelecanus crispus",                     
+      "weight_kg_lower": "10",                                    
+      "weight_kg_upper": "12"                                     
+    },  
+...
+```
+
 ### Code execution
 
 Gemini models can [write and execute code](https://ai.google.dev/gemini-api/docs/code-execution) - they can decide to write Python code, execute it in a secure sandbox and use the result as part of their response.
