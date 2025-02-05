@@ -47,6 +47,9 @@ Other models are:
 - `learnlm-1.5-pro-experimental` - "an experimental task-specific model that has been trained to align with learning science principles" - [more details here](https://ai.google.dev/gemini-api/docs/learnlm).
 - `gemini-2.0-flash-thinking-exp-1219` - experimental "thinking" model from December 2024
 - `gemini-2.0-flash-thinking-exp-01-21` - experimental "thinking" model from January 2025
+- `gemini-2.0-flash` - Gemini 2.0 Flash
+- `gemini-2.0-flash-lite-preview-02-05` - Gemini 2.0 Flash-Lite
+- `gemini-2.0-pro-exp-02-05` - experimental release of Gemini 2.0 Pro
 
 ### Images, audio and video
 

@@ -55,6 +55,10 @@ def register_models(register):
         "learnlm-1.5-pro-experimental",
         "gemini-2.0-flash-thinking-exp-1219",
         "gemini-2.0-flash-thinking-exp-01-21",
+        # Released 5th Feb 2025:
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite-preview-02-05",
+        "gemini-2.0-pro-exp-02-05",
     ]:
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         register(
