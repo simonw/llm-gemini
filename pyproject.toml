@@ -11,7 +11,9 @@ classifiers = [
 dependencies = [
     "llm>=0.19",
     "httpx",
-    "ijson"
+    "ijson",
+    "pyyaml",
+    "pydantic"
 ]
 
 [project.urls]
