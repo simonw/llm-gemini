@@ -1,3 +1,4 @@
+from bs4 import BeautifulSoup
 import httpx
 import ijson
 import llm
@@ -75,6 +76,13 @@ def resolve_type(attachment):
     if mime_type == "application/ogg":
         mime_type = "audio/ogg"
     return mime_type
+
+
+def format_link(osc8format, title, link):
+    if osc8format:
+        return f"\x1b]8;;{link}\a{title}\x1b]8;;\a"
+    else:
+        return f"{title}: {link}"
 
 
 class _SharedGemini:
@@ -166,6 +174,14 @@ class _SharedGemini:
             description="Enables the model to use Google Search to improve the accuracy and recency of responses from the model",
             default=None,
         )
+        grounding_links: Optional[bool] = Field(
+            description="Whether to show the grounding links from the response",
+            default=True
+        )
+        format_links: Optional[bool] = Field(
+            description="Whether to format the grounding links and search recommendation with OSC 8 escape sequences",
+            default=True
+        )
 
     def __init__(self, model_id, can_google_search=False):
         self.model_id = model_id
@@ -254,6 +270,36 @@ class _SharedGemini:
             return f'```\n{part["codeExecutionResult"]["output"].strip()}\n```\n'
         return ""
 
+    def process_grounding(self, event, options):
+        if not options or not self.can_google_search or not options.google_search:
+            return ""
+
+        try:
+            text = ""
+            grounding = event["candidates"][0]["groundingMetadata"]
+            if options.grounding_links and grounding:
+                chunks = grounding["groundingChunks"]
+                if chunks:
+                    text += "\n\nGrounding Sources:\n"
+                    for index, chunk in enumerate(chunks):
+                        if "web" in chunk:
+                            title = chunk['web']['title']
+                            href = chunk['web']['uri']
+                            text += f"{index + 1}. {format_link(options.format_links, title, href)}\n"
+                rendered_content = grounding["searchEntryPoint"]["renderedContent"]
+                if rendered_content:
+                    soup = BeautifulSoup(rendered_content, 'html.parser')
+                    links = soup.find_all('a')
+                    if links:
+                        text += f"\nGoogle Search Suggestions:\n"
+                        for link in links:
+                            title = link.string
+                            href = link['href']
+                            text += f"{format_link(options.format_links, title, href)}\n"
+            return text
+        except KeyError:
+            return ""
+
     def set_usage(self, response):
         try:
             usage = response.response_json[-1].pop("usageMetadata")
@@ -292,7 +338,9 @@ class GeminiPro(_SharedGemini, llm.Model):
                         raise llm.ModelError(event["error"]["message"])
                     try:
                         part = event["candidates"][0]["content"]["parts"][0]
-                        yield self.process_part(part)
+                        text = self.process_part(part)
+                        text += self.process_grounding(event, prompt.options)
+                        yield text
                     except KeyError:
                         yield ""
                     gathered.append(event)
@@ -326,7 +374,9 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncModel):
                             raise llm.ModelError(event["error"]["message"])
                         try:
                             part = event["candidates"][0]["content"]["parts"][0]
-                            yield self.process_part(part)
+                            text = self.process_part(part)
+                            text + self.process_grounding(event, prompt.options)
+                            yield text
                         except KeyError:
                             yield ""
                         gathered.append(event)
