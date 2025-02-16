@@ -160,6 +160,10 @@ class _SharedGemini:
             description="Output a valid JSON object {...}",
             default=None,
         )
+        stop: Optional[str] = Field(
+            description="Stop generation when this sequence is encountered",
+            default=None,
+        )
 
     class OptionsWithGoogleSearch(Options):
         google_search: Optional[bool] = Field(
@@ -229,6 +233,7 @@ class _SharedGemini:
             "max_output_tokens": "maxOutputTokens",
             "top_p": "topP",
             "top_k": "topK",
+            "stop": "stopSequences",            
         }
         if prompt.options and prompt.options.json_object:
             body["generationConfig"] = {"response_mime_type": "application/json"}
