@@ -220,7 +220,7 @@ class _SharedGemini:
         if prompt.options and prompt.options.code_execution:
             body["tools"] = [{"codeExecution": {}}]
         if prompt.options and self.can_google_search and prompt.options.google_search:
-            body["tools"] = [{"google_search_retrieval": {}}]
+            body["tools"] = [{"google_search": {}}]
         if prompt.system:
             body["systemInstruction"] = {"parts": [{"text": prompt.system}]}
 
