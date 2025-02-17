@@ -268,9 +268,8 @@ class _SharedGemini:
             pass
 
 
-class GeminiPro(_SharedGemini, llm.Model):
-    def execute(self, prompt, stream, response, conversation):
-        key = self.get_key()
+class GeminiPro(_SharedGemini, llm.KeyModel):
+    def execute(self, prompt, stream, response, conversation, key):
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_id}:streamGenerateContent"
         gathered = []
         body = self.build_request_body(prompt, conversation)
@@ -279,7 +278,7 @@ class GeminiPro(_SharedGemini, llm.Model):
             "POST",
             url,
             timeout=None,
-            headers={"x-goog-api-key": key},
+            headers={"x-goog-api-key": self.get_key(key)},
             json=body,
         ) as http_response:
             events = ijson.sendable_list()
@@ -301,9 +300,8 @@ class GeminiPro(_SharedGemini, llm.Model):
         self.set_usage(response)
 
 
-class AsyncGeminiPro(_SharedGemini, llm.AsyncModel):
-    async def execute(self, prompt, stream, response, conversation):
-        key = self.get_key()
+class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
+    async def execute(self, prompt, stream, response, conversation, key):
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_id}:streamGenerateContent"
         gathered = []
         body = self.build_request_body(prompt, conversation)
@@ -313,7 +311,7 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncModel):
                 "POST",
                 url,
                 timeout=None,
-                headers={"x-goog-api-key": key},
+                headers={"x-goog-api-key": self.get_key(key)},
                 json=body,
             ) as http_response:
                 events = ijson.sendable_list()

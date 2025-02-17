@@ -1,4 +1,3 @@
-version: 1
 interactions:
 - request:
     body: '{"contents": [{"role": "user", "parts": [{"text": "Name for a pet pelican,
@@ -26,13 +25,14 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAC/1yOPwvCMBDF936KcLOVVnBxdRYcxKU4HO1Zg22uJFdQSr+7SUr/YIbjeO+Xd68Y
-        EqWgRFPpCoUcnFThFaWGOIPHRsiIN2bJix1aWdnpDZvdI0Kf8AmuZMsvbLxx2R+7NdFyQwFvuaJm
-        xic0zIhC77CmCwn6rrg0gs5y28mN32TO3MeueTZlg7Bg82d5Z4x58didrNNswvGaWm10mu+P6bNB
-        90qz7ADJmPwAAAD//9Lh5aJ5OMXkkRtIMAVKaUDHF2cEpSYWQ7wTHOIfoASXLU5MSy2pDEosycxL
-        R3UTsouAfixJTc8vqgQZ4OEY5Bvv7Bji6u4fFBnvAWTEBwe4ujp7KOkgawGGf1JiUmZOZglYl5+r
-        u4+nu6eTjyvCR7U6pNrm4ujn7hrkHxoc7+zvF+LqF0IHO4E8x+BgX/pYFuwaEero4xMZ7xoR4OPp
-        7EmGnVBWLOXZBJGyUeSNcOciI5JzEQAAAP//igUAAAD//wMA8wldlG0EAAA=
+        H4sIAAAAAAAC/1yQTwvCMAzF7/sUJWcn7uDFq2fBg3gZHsIWZ7FrRpuBMvbdbTv2B3sI4b1fX0LK
+        IVMKKrS1rlHIw0mVQVFqSDV6bIWsBGOWgtihk5Wd3rDpAyL0iZ/gSq76wsYbl/6xWxMdG4p4yzWZ
+        GZ/QWBMKvceGLiQYdsVlI+gct53c+E32zH3atThM2SAsaP6s4IwpLw27k/OabRzeUKutzov9MX8a
+        9K/cxJsIZGP2AwAA//+8VD0PgjAQ3U38E8wssjlWuABJ+UhbEkgkTUkASQgmwsLgf7cqSIk6SNTt
+        muvde+96r/p69fNR7ZulcxovaIXk3x5ILtq7IsqCUHtkW1HkXU9EVzXlnJPKSGrs8vJ46q8NHEQ8
+        biIGdkAS7siA0xDAdDRdLZFPkImsqqvuVuWDjV3b3WGYFJ31T9Es5NtAgohyM/AZ+OwPmPKEKPX+
+        A0YhjhDGCYc4xK7pLsAconSxU7aDUabFnqWN9z7a6E9NW0tCVrW6W4oV5M6KUQyDWFUr+6ucZv5P
+        XzP8EpYxx1ryN1wAAAD//4oFAAAA//8DAOHmBKtGBQAA
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
@@ -41,11 +41,11 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Mon, 18 Nov 2024 07:05:55 GMT
+      - Mon, 17 Feb 2025 05:16:14 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=451
+      - gfet4t7; dur=284
       Transfer-Encoding:
       - chunked
       Vary:
@@ -87,13 +87,14 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAC/1yOPwvCMBDF936KcLOVVnBxdRYcxKU4HO1Zg22uJFdQSr+7SUr/YIbjeO+Xd68Y
-        EqWgRFPpCoUcnFThFaWGOIPHRsiIN2bJix1aWdnpDZvdI0Kf8AmuZMsvbLxx2R+7NdFyQwFvuaJm
-        xic0zIhC77CmCwn6rrg0gs5y28mN32TO3MeueTZlg7Bg82d5Z4x58didrNNswvGaWm10mu+P6bNB
-        90qz7ADJmPwAAAD//9Lh5aJ5OMXkkRtIMAVKaUDHF2cEpSYWQ7wTHOIfoASXLU5MSy2pDEosycxL
-        R3UTsouAfixJTc8vqgQZ4OEY5Bvv7Bji6u4fFBnvAWTEBwe4ujp7KOkgawGGf1JiUmZOZglYl5+r
-        u4+nu6eTjyvCR7U6pNrm4ujn7hrkHxoc7+zvF+LqF0IHO4E8x+BgX/pYFuwaEero4xMZ7xoR4OPp
-        7EmGnVBWLOXZBJGyUeSNcOciI5JzEQAAAP//igUAAAD//wMA8wldlG0EAAA=
+        H4sIAAAAAAAC/1yQTwvCMAzF7/sUJWcn7uDFq2fBg3gZHsIWZ7FrRpuBMvbdbTv2B3sI4b1fX0LK
+        IVMKKrS1rlHIw0mVQVFqSDV6bIWsBGOWgtihk5Wd3rDpAyL0iZ/gSq76wsYbl/6xWxMdG4p4yzWZ
+        GZ/QWBMKvceGLiQYdsVlI+gct53c+E32zH3atThM2SAsaP6s4IwpLw27k/OabRzeUKutzov9MX8a
+        9K/cxJsIZGP2AwAA//+8VD0PgjAQ3U38E8wssjlWuABJ+UhbEkgkTUkASQgmwsLgf7cqSIk6SNTt
+        muvde+96r/p69fNR7ZulcxovaIXk3x5ILtq7IsqCUHtkW1HkXU9EVzXlnJPKSGrs8vJ46q8NHEQ8
+        biIGdkAS7siA0xDAdDRdLZFPkImsqqvuVuWDjV3b3WGYFJ31T9Es5NtAgohyM/AZ+OwPmPKEKPX+
+        A0YhjhDGCYc4xK7pLsAconSxU7aDUabFnqWN9z7a6E9NW0tCVrW6W4oV5M6KUQyDWFUr+6ucZv5P
+        XzP8EpYxx1ryN1wAAAD//4oFAAAA//8DAOHmBKtGBQAA
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
@@ -102,11 +103,11 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Mon, 18 Nov 2024 07:05:55 GMT
+      - Mon, 17 Feb 2025 05:16:14 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=451
+      - gfet4t7; dur=272
       Transfer-Encoding:
       - chunked
       Vary:
@@ -122,3 +123,4 @@ interactions:
     status:
       code: 200
       message: OK
+version: 1
