@@ -1,3 +1,4 @@
+import copy
 import httpx
 import ijson
 import llm
@@ -79,10 +80,26 @@ def resolve_type(attachment):
     return mime_type
 
 
+def cleanup_schema(schema):
+    "Gemini supports only a subset of JSON schema"
+    keys_to_remove = ("$schema", "additionalProperties")
+    # Recursively remove them
+    if isinstance(schema, dict):
+        for key in keys_to_remove:
+            schema.pop(key, None)
+        for value in schema.values():
+            cleanup_schema(value)
+    elif isinstance(schema, list):
+        for value in schema:
+            cleanup_schema(value)
+    return schema
+
+
 class _SharedGemini:
     needs_key = "gemini"
     key_env_var = "LLM_GEMINI_KEY"
     can_stream = True
+    supports_schema = True
 
     attachment_types = (
         # Text
@@ -225,6 +242,12 @@ class _SharedGemini:
             body["tools"] = [{"google_search": {}}]
         if prompt.system:
             body["systemInstruction"] = {"parts": [{"text": prompt.system}]}
+
+        if prompt.schema:
+            body["generationConfig"] = {
+                "response_mime_type": "application/json",
+                "response_schema": cleanup_schema(copy.deepcopy(prompt.schema)),
+            }
 
         config_map = {
             "temperature": "temperature",
