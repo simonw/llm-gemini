@@ -65,8 +65,16 @@ def register_models(register):
     ]:
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         register(
-            GeminiPro(model_id, can_google_search=can_google_search),
-            AsyncGeminiPro(model_id, can_google_search=can_google_search),
+            GeminiPro(
+                model_id,
+                can_google_search=can_google_search,
+                can_schema="flash-thinking" not in model_id,
+            ),
+            AsyncGeminiPro(
+                model_id,
+                can_google_search=can_google_search,
+                can_schema="flash-thinking" not in model_id,
+            ),
         )
 
 
@@ -186,9 +194,10 @@ class _SharedGemini:
             default=None,
         )
 
-    def __init__(self, model_id, can_google_search=False):
+    def __init__(self, model_id, can_google_search=False, can_schema=False):
         self.model_id = model_id
         self.can_google_search = can_google_search
+        self.supports_schema = can_schema
         if can_google_search:
             self.Options = self.OptionsWithGoogleSearch
 
