@@ -1,6 +1,6 @@
 [project]
 name = "llm-gemini"
-version = "0.13a0"
+version = "0.13"
 description = "LLM plugin to access Google's Gemini family of models"
 readme = "README.md"
 authors = [{name = "Simon Willison"}]
@@ -9,7 +9,7 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License"
 ]
 dependencies = [
-    "llm>=0.23a0",
+    "llm>=0.23",
     "httpx",
     "ijson"
 ]
