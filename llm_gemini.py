@@ -90,7 +90,7 @@ def resolve_type(attachment):
 
 def cleanup_schema(schema):
     "Gemini supports only a subset of JSON schema"
-    keys_to_remove = ("$schema", "additionalProperties")
+    keys_to_remove = ("$schema", "additionalProperties", "title")
     # Recursively remove them
     if isinstance(schema, dict):
         for key in keys_to_remove:
