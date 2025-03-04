@@ -295,7 +295,7 @@ class _SharedGemini:
 
     def set_usage(self, response):
         try:
-            usage = response.response_json[-1].pop("usageMetadata")
+            usage = response.response_json.pop("usageMetadata")
             input_tokens = usage.pop("promptTokenCount", None)
             output_tokens = usage.pop("candidatesTokenCount", None)
             usage.pop("totalTokenCount", None)
@@ -334,7 +334,7 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
                             yield ""
                         gathered.append(event)
                     events.clear()
-        response.response_json = gathered
+        response.response_json = gathered[-1]
         self.set_usage(response)
 
 
@@ -369,7 +369,7 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                                 yield ""
                             gathered.append(event)
                         events.clear()
-        response.response_json = gathered
+        response.response_json = gathered[-1]
         self.set_usage(response)
 
 

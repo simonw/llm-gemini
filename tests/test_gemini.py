@@ -16,42 +16,33 @@ async def test_prompt():
     model = llm.get_model("gemini-1.5-flash-latest")
     response = model.prompt("Name for a pet pelican, just the name", key=GEMINI_API_KEY)
     assert str(response) == "Percy\n"
-    assert response.response_json == [
-        {
-            "candidates": [
-                {"content": {"parts": [{"text": "Percy"}], "role": "model"}}
-            ],
-            "usageMetadata": {"promptTokenCount": 10, "totalTokenCount": 10},
-            "modelVersion": "gemini-1.5-flash-latest",
-        },
-        {
-            "candidates": [
-                {
-                    "content": {"parts": [{"text": "\n"}], "role": "model"},
-                    "finishReason": "STOP",
-                    "safetyRatings": [
-                        {
-                            "category": "HARM_CATEGORY_HATE_SPEECH",
-                            "probability": "NEGLIGIBLE",
-                        },
-                        {
-                            "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                            "probability": "NEGLIGIBLE",
-                        },
-                        {
-                            "category": "HARM_CATEGORY_HARASSMENT",
-                            "probability": "NEGLIGIBLE",
-                        },
-                        {
-                            "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                            "probability": "NEGLIGIBLE",
-                        },
-                    ],
-                }
-            ],
-            "modelVersion": "gemini-1.5-flash-latest",
-        },
-    ]
+    assert response.response_json == {
+        "candidates": [
+            {
+                "content": {"parts": [{"text": "\n"}], "role": "model"},
+                "finishReason": "STOP",
+                "safetyRatings": [
+                    {
+                        "category": "HARM_CATEGORY_HATE_SPEECH",
+                        "probability": "NEGLIGIBLE",
+                    },
+                    {
+                        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                        "probability": "NEGLIGIBLE",
+                    },
+                    {
+                        "category": "HARM_CATEGORY_HARASSMENT",
+                        "probability": "NEGLIGIBLE",
+                    },
+                    {
+                        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                        "probability": "NEGLIGIBLE",
+                    },
+                ],
+            }
+        ],
+        "modelVersion": "gemini-1.5-flash-latest",
+    }
     assert response.token_details == {
         "promptTokensDetails": [{"modality": "TEXT", "tokenCount": 9}],
         "candidatesTokensDetails": [{"modality": "TEXT", "tokenCount": 2}],
@@ -85,125 +76,38 @@ async def test_prompt_with_pydantic_schema():
         "bio": "A fluffy Samoyed with exceptional intelligence and a love for belly rubs. He's mastered several tricks, including fetching the newspaper and opening doors.",
         "name": "Cloud",
     }
-    assert response.response_json == [
-        {
-            "candidates": [{"content": {"parts": [{"text": '{"'}], "role": "model"}}],
-            "usageMetadata": {
-                "promptTokenCount": 5,
-                "totalTokenCount": 5,
-                "promptTokensDetails": [{"modality": "TEXT", "tokenCount": 5}],
-            },
-            "modelVersion": "gemini-1.5-flash-latest",
-        },
-        {
-            "candidates": [
-                {
-                    "content": {
-                        "parts": [
-                            {
-                                "text": 'age": 3, "bio": "A fluffy Samoyed with exceptional'
-                            }
-                        ],
-                        "role": "model",
-                    },
-                    "safetyRatings": [
+    assert response.response_json == {
+        "candidates": [
+            {
+                "content": {
+                    "parts": [
                         {
-                            "category": "HARM_CATEGORY_HATE_SPEECH",
-                            "probability": "NEGLIGIBLE",
-                        },
-                        {
-                            "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                            "probability": "NEGLIGIBLE",
-                        },
-                        {
-                            "category": "HARM_CATEGORY_HARASSMENT",
-                            "probability": "NEGLIGIBLE",
-                        },
-                        {
-                            "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                            "probability": "NEGLIGIBLE",
-                        },
+                            "text": ' fetching the newspaper and opening doors.", "name": "Cloud"}'
+                        }
                     ],
-                }
-            ],
-            "usageMetadata": {
-                "promptTokenCount": 5,
-                "totalTokenCount": 5,
-                "promptTokensDetails": [{"modality": "TEXT", "tokenCount": 5}],
-            },
-            "modelVersion": "gemini-1.5-flash-latest",
-        },
-        {
-            "candidates": [
-                {
-                    "content": {
-                        "parts": [
-                            {
-                                "text": " intelligence and a love for belly rubs. He's mastered several tricks, including"
-                            }
-                        ],
-                        "role": "model",
+                    "role": "model",
+                },
+                "finishReason": "STOP",
+                "safetyRatings": [
+                    {
+                        "category": "HARM_CATEGORY_HATE_SPEECH",
+                        "probability": "NEGLIGIBLE",
                     },
-                    "safetyRatings": [
-                        {
-                            "category": "HARM_CATEGORY_HATE_SPEECH",
-                            "probability": "NEGLIGIBLE",
-                        },
-                        {
-                            "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                            "probability": "NEGLIGIBLE",
-                        },
-                        {
-                            "category": "HARM_CATEGORY_HARASSMENT",
-                            "probability": "NEGLIGIBLE",
-                        },
-                        {
-                            "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                            "probability": "LOW",
-                        },
-                    ],
-                }
-            ],
-            "usageMetadata": {
-                "promptTokenCount": 5,
-                "totalTokenCount": 5,
-                "promptTokensDetails": [{"modality": "TEXT", "tokenCount": 5}],
-            },
-            "modelVersion": "gemini-1.5-flash-latest",
-        },
-        {
-            "candidates": [
-                {
-                    "content": {
-                        "parts": [
-                            {
-                                "text": ' fetching the newspaper and opening doors.", "name": "Cloud"}'
-                            }
-                        ],
-                        "role": "model",
+                    {
+                        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                        "probability": "NEGLIGIBLE",
                     },
-                    "finishReason": "STOP",
-                    "safetyRatings": [
-                        {
-                            "category": "HARM_CATEGORY_HATE_SPEECH",
-                            "probability": "NEGLIGIBLE",
-                        },
-                        {
-                            "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                            "probability": "NEGLIGIBLE",
-                        },
-                        {
-                            "category": "HARM_CATEGORY_HARASSMENT",
-                            "probability": "NEGLIGIBLE",
-                        },
-                        {
-                            "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                            "probability": "NEGLIGIBLE",
-                        },
-                    ],
-                }
-            ],
-            "modelVersion": "gemini-1.5-flash-latest",
-        },
-    ]
+                    {
+                        "category": "HARM_CATEGORY_HARASSMENT",
+                        "probability": "NEGLIGIBLE",
+                    },
+                    {
+                        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                        "probability": "NEGLIGIBLE",
+                    },
+                ],
+            }
+        ],
+        "modelVersion": "gemini-1.5-flash-latest",
+    }
     assert response.input_tokens == 10
