@@ -295,6 +295,9 @@ class _SharedGemini:
 
     def set_usage(self, response):
         try:
+            # Don't record the "content" key from that last candidate
+            for candidate in response.response_json["candidates"]:
+                candidate.pop("content", None)
             usage = response.response_json.pop("usageMetadata")
             input_tokens = usage.pop("promptTokenCount", None)
             output_tokens = usage.pop("candidatesTokenCount", None)

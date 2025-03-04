@@ -19,7 +19,6 @@ async def test_prompt():
     assert response.response_json == {
         "candidates": [
             {
-                "content": {"parts": [{"text": "\n"}], "role": "model"},
                 "finishReason": "STOP",
                 "safetyRatings": [
                     {
@@ -79,14 +78,6 @@ async def test_prompt_with_pydantic_schema():
     assert response.response_json == {
         "candidates": [
             {
-                "content": {
-                    "parts": [
-                        {
-                            "text": ' fetching the newspaper and opening doors.", "name": "Cloud"}'
-                        }
-                    ],
-                    "role": "model",
-                },
                 "finishReason": "STOP",
                 "safetyRatings": [
                     {
