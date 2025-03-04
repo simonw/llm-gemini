@@ -90,7 +90,7 @@ def resolve_type(attachment):
 
 def cleanup_schema(schema):
     "Gemini supports only a subset of JSON schema"
-    keys_to_remove = ("$schema", "additionalProperties")
+    keys_to_remove = ("$schema", "additionalProperties", "title")
     # Recursively remove them
     if isinstance(schema, dict):
         for key in keys_to_remove:
@@ -288,6 +288,11 @@ class _SharedGemini:
             return f'```\n{part["codeExecutionResult"]["output"].strip()}\n```\n'
         return ""
 
+    def process_candidates(self, candidates):
+        # We only use the first candidate
+        for part in candidates[0]["content"]["parts"]:
+            yield self.process_part(part)
+
     def set_usage(self, response):
         try:
             usage = response.response_json[-1].pop("usageMetadata")
@@ -320,15 +325,14 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
             for chunk in http_response.iter_bytes():
                 coro.send(chunk)
                 if events:
-                    event = events[0]
-                    if isinstance(event, dict) and "error" in event:
-                        raise llm.ModelError(event["error"]["message"])
-                    try:
-                        part = event["candidates"][0]["content"]["parts"][0]
-                        yield self.process_part(part)
-                    except KeyError:
-                        yield ""
-                    gathered.append(event)
+                    for event in events:
+                        if isinstance(event, dict) and "error" in event:
+                            raise llm.ModelError(event["error"]["message"])
+                        try:
+                            yield from self.process_candidates(event["candidates"])
+                        except KeyError:
+                            yield ""
+                        gathered.append(event)
                     events.clear()
         response.response_json = gathered
         self.set_usage(response)
@@ -353,15 +357,17 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                 async for chunk in http_response.aiter_bytes():
                     coro.send(chunk)
                     if events:
-                        event = events[0]
-                        if isinstance(event, dict) and "error" in event:
-                            raise llm.ModelError(event["error"]["message"])
-                        try:
-                            part = event["candidates"][0]["content"]["parts"][0]
-                            yield self.process_part(part)
-                        except KeyError:
-                            yield ""
-                        gathered.append(event)
+                        for event in events:
+                            if isinstance(event, dict) and "error" in event:
+                                raise llm.ModelError(event["error"]["message"])
+                            try:
+                                for chunk in self.process_candidates(
+                                    event["candidates"]
+                                ):
+                                    yield chunk
+                            except KeyError:
+                                yield ""
+                            gathered.append(event)
                         events.clear()
         response.response_json = gathered
         self.set_usage(response)

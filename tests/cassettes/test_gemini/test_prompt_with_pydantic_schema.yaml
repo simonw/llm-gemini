@@ -1,0 +1,71 @@
+interactions:
+- request:
+    body: '{"contents": [{"role": "user", "parts": [{"text": "Invent a cool dog"}]}],
+      "safetySettings": [{"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold":
+      "BLOCK_NONE"}, {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold":
+      "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+      {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"}], "generationConfig":
+      {"response_mime_type": "application/json", "response_schema": {"properties":
+      {"name": {"type": "string"}, "age": {"type": "integer"}, "bio": {"type": "string"}},
+      "required": ["name", "age", "bio"], "type": "object"}}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '623'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - python-httpx/0.25.2
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:streamGenerateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/2yQMQvCMBCF9/6KcLMVHLq4qqNbEaF2OOxZg2lSmisopf/dJKVtBDMcx713j+9S
+        DIkQcEddyQqZLOxF4SZCDKF6zWgmzU6YR27YYserd3pD1DsL09svwXADiJRx6cvNmtcZRd7cmIrU
+        bJ+svgYr9BZrOhOjI8WFB9rONC3n5kX6YPpAmk3RwIZR/VWiJXt0kVLF50SXOiJUkj+eLj9dc4io
+        +Sf5h7p0dQzU4aQLdVYa7UNqaqSW6W6bpQ+F9pkq/+8MyZh8AQAA///S4eWieXQAgzAGSBvrKMQo
+        JWXmg9gxSo4KaTmlaWmVCsGJufmVqSkK5ZklGQqpFcmpBSVAZyfmkBuDMAVKxYlpqSWVQYklmXnp
+        qC5FdifQ5yWp6flF4ND2cAzyjXd2DHF19w+KjPcAMuKDA1xdnT2QogASk0mJSZmwOPJzdffxdPd0
+        8nFFuLlWh1TbXBz93F2D/EOD4539/UJc/ULoYCeQ5xgc7Esfy4JdI0IdfXwi410jAnw8nT3JsBPK
+        ih1puRQAAAD//6JHLlXIBOrPyclMT81LTlUAWqSQqJCTX5aqkJZfpJAElKlUKCpNKtZT8EhVL1bI
+        TSwuSS0CZtvi1LLUosQchZKizOTsYh2gKck5pSnALDeaf0d0/vXxDx/NuFwAAAAA//+iS8YFZpPk
+        DGAmUSjJSFXISy0vLkgsSC0CZ+H8gtQ8kExKfn5RsV6MEqgKzkvMTYXUwc45+aUpMUq1FGfVNKD/
+        izOCUhOLISESHOIfoDSakUnx4aDNyLSpiA0NoNkWkTNQ5E3McGd4M5rleEMD1CyP3Y1UsszEjPLy
+        BQAAAP//igUAAAD//wMA+8/uV00NAAA=
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 04 Mar 2025 16:13:58 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=397
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1
