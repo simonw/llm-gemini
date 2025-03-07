@@ -24,4 +24,4 @@ CI = "https://github.com/simonw/llm-gemini/actions"
 gemini = "llm_gemini"
 
 [project.optional-dependencies]
-test = ["pytest", "pytest-recording", "nest-asyncio"]
+test = ["pytest", "pytest-recording", "pytest-asyncio", "nest-asyncio"]

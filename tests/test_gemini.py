@@ -114,7 +114,7 @@ async def test_prompt_with_pydantic_schema():
     ),
 )
 def test_embedding(model_id, monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", GEMINI_API_KEY)
+    monkeypatch.setenv("LLM_GEMINI_KEY", GEMINI_API_KEY)
     model = llm.get_embedding_model(model_id)
     response = model.embed("Some text goes here")
     expected_length = 3072
