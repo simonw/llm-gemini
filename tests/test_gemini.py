@@ -102,3 +102,24 @@ async def test_prompt_with_pydantic_schema():
         "modelVersion": "gemini-1.5-flash-latest",
     }
     assert response.input_tokens == 10
+
+
+@pytest.mark.vcr
+@pytest.mark.parametrize(
+    "model_id",
+    (
+        "gemini-embedding-exp-03-07",
+        "gemini-embedding-exp-03-07-128",
+        "gemini-embedding-exp-03-07-512",
+    ),
+)
+def test_embedding(model_id, monkeypatch):
+    monkeypatch.setenv("LLM_GEMINI_KEY", GEMINI_API_KEY)
+    model = llm.get_embedding_model(model_id)
+    response = model.embed("Some text goes here")
+    expected_length = 3072
+    if model_id.endswith("-128"):
+        expected_length = 128
+    elif model_id.endswith("-512"):
+        expected_length = 512
+    assert len(response) == expected_length
