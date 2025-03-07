@@ -378,9 +378,19 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
 
 @llm.hookimpl
 def register_embedding_models(register):
+    register(GeminiEmbeddingModel("text-embedding-004", "text-embedding-004"))
+    # gemini-embedding-exp-03-07 in different truncation sizes
     register(
-        GeminiEmbeddingModel("text-embedding-004", "text-embedding-004"),
+        GeminiEmbeddingModel(
+            "gemini-embedding-exp-03-07", "gemini-embedding-exp-03-07"
+        ),
     )
+    for i in (128, 256, 512, 1024, 2048):
+        register(
+            GeminiEmbeddingModel(
+                f"gemini-embedding-exp-03-07-{i}", f"gemini-embedding-exp-03-07", i
+            ),
+        )
 
 
 class GeminiEmbeddingModel(llm.EmbeddingModel):
@@ -388,9 +398,10 @@ class GeminiEmbeddingModel(llm.EmbeddingModel):
     key_env_var = "LLM_GEMINI_KEY"
     batch_size = 20
 
-    def __init__(self, model_id, gemini_model_id):
+    def __init__(self, model_id, gemini_model_id, truncate=None):
         self.model_id = model_id
         self.gemini_model_id = gemini_model_id
+        self.truncate = truncate
 
     def embed_batch(self, items):
         headers = {
@@ -416,4 +427,7 @@ class GeminiEmbeddingModel(llm.EmbeddingModel):
             )
 
         response.raise_for_status()
-        return [item["values"] for item in response.json()["embeddings"]]
+        values = [item["values"] for item in response.json()["embeddings"]]
+        if self.truncate:
+            values = [value[: self.truncate] for value in values]
+        return values
