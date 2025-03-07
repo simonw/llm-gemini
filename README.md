@@ -124,7 +124,7 @@ llm chat -m gemini-1.5-pro-latest
 
 ## Embeddings
 
-The plugin also adds support for the `text-embedding-004` embedding model.
+The plugin also adds support for the `gemini-embedding-exp-03-07` and `text-embedding-004` embedding models.
 
 Run that against a single string like this:
 ```bash
@@ -132,10 +132,20 @@ llm embed -m text-embedding-004 -c 'hello world'
 ```
 This returns a JSON array of 768 numbers.
 
+The `gemini-embedding-exp-03-07` model is larger, returning 3072 numbers. You can also use variants of it that are truncated down to smaller sizes:
+
+- `gemini-embedding-exp-03-07` - 3072 numbers
+- `gemini-embedding-exp-03-07-2048` - 2048 numbers
+- `gemini-embedding-exp-03-07-1024` - 1024 numbers
+- `gemini-embedding-exp-03-07-512` - 512 numbers
+- `gemini-embedding-exp-03-07-256` - 256 numbers
+- `gemini-embedding-exp-03-07-128` - 128 numbers
+
 This command will embed every `README.md` file in child directories of the current directory and store the results in a SQLite database called `embed.db` in a collection called `readmes`:
 
 ```bash
-llm embed-multi readmes --files . '*/README.md' -d embed.db -m text-embedding-004
+llm embed-multi readmes -d embed.db -m gemini-embedding-exp-03-07-128 \
+  --files . '*/README.md'
 ```
 You can then run similarity searches against that collection like this:
 ```bash
