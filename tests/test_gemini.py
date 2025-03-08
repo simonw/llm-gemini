@@ -4,6 +4,7 @@ import json
 import os
 import pytest
 import pydantic
+from llm_gemini import cleanup_schema
 
 nest_asyncio.apply()
 
@@ -123,3 +124,89 @@ def test_embedding(model_id, monkeypatch):
     elif model_id.endswith("-512"):
         expected_length = 512
     assert len(response) == expected_length
+
+
+@pytest.mark.parametrize(
+    "schema,expected",
+    [
+        # Test 1: Top-level keys removal
+        (
+            {
+                "$schema": "http://json-schema.org/draft-07/schema#",
+                "title": "Example Schema",
+                "additionalProperties": False,
+                "type": "object",
+            },
+            {"type": "object"},
+        ),
+        # Test 2: Preserve keys within a "properties" block
+        (
+            {
+                "type": "object",
+                "properties": {
+                    "authors": {"type": "string"},
+                    "title": {"type": "string"},
+                    "reference": {"type": "string"},
+                    "year": {"type": "string"},
+                },
+                "title": "This should be removed from the top-level",
+            },
+            {
+                "type": "object",
+                "properties": {
+                    "authors": {"type": "string"},
+                    "title": {"type": "string"},
+                    "reference": {"type": "string"},
+                    "year": {"type": "string"},
+                },
+            },
+        ),
+        # Test 3: Nested keys outside and inside properties block
+        (
+            {
+                "definitions": {
+                    "info": {
+                        "title": "Info title",  # should be removed because it's not inside a "properties" block
+                        "description": "A description",
+                        "properties": {
+                            "name": {
+                                "title": "Name Title",
+                                "type": "string",
+                            },  # title here should be preserved
+                            "$schema": {
+                                "type": "string"
+                            },  # should be preserved as it's within properties
+                        },
+                    }
+                },
+                "$schema": "http://example.com/schema",
+            },
+            {
+                "definitions": {
+                    "info": {
+                        "description": "A description",
+                        "properties": {
+                            "name": {"title": "Name Title", "type": "string"},
+                            "$schema": {"type": "string"},
+                        },
+                    }
+                }
+            },
+        ),
+        # Test 4: List of schemas
+        (
+            [
+                {
+                    "$schema": "http://json-schema.org/draft-07/schema#",
+                    "type": "object",
+                },
+                {"title": "Should be removed", "type": "array"},
+            ],
+            [{"type": "object"}, {"type": "array"}],
+        ),
+    ],
+)
+def test_cleanup_schema(schema, expected):
+    # Use a deep copy so the original test data remains unchanged.
+    result = cleanup_schema(schema)
+    assert result == expected

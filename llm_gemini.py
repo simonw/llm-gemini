@@ -88,18 +88,24 @@ def resolve_type(attachment):
     return mime_type
 
 
-def cleanup_schema(schema):
+def cleanup_schema(schema, in_properties=False):
     "Gemini supports only a subset of JSON schema"
     keys_to_remove = ("$schema", "additionalProperties", "title")
-    # Recursively remove them
+
     if isinstance(schema, dict):
-        for key in keys_to_remove:
-            schema.pop(key, None)
-        for value in schema.values():
-            cleanup_schema(value)
+        # Only remove keys if we're not inside a 'properties' block.
+        if not in_properties:
+            for key in keys_to_remove:
+                schema.pop(key, None)
+        for key, value in list(schema.items()):
+            # If the key is 'properties', set the flag for its value.
+            if key == "properties" and isinstance(value, dict):
+                cleanup_schema(value, in_properties=True)
+            else:
+                cleanup_schema(value, in_properties=in_properties)
     elif isinstance(schema, list):
-        for value in schema:
-            cleanup_schema(value)
+        for item in schema:
+            cleanup_schema(item, in_properties=in_properties)
     return schema
 
 
