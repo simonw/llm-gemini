@@ -24,10 +24,10 @@ llm keys set gemini
 ```
 You can also set the API key by assigning it to the environment variable `LLM_GEMINI_KEY`.
 
-Now run the model using `-m gemini-1.5-pro-latest`, for example:
+Now run the model using `-m gemini-2.0-flash`, for example:
 
 ```bash
-llm -m gemini-1.5-pro-latest "A joke about a pelican and a walrus"
+llm -m gemini-2.0-flash "A joke about a pelican and a walrus"
 ```
 
 > A pelican walks into a seafood restaurant with a huge fish hanging out of its beak.  The walrus, sitting at the bar, eyes it enviously.
@@ -36,10 +36,18 @@ llm -m gemini-1.5-pro-latest "A joke about a pelican and a walrus"
 >
 > The pelican taps its beak thoughtfully. "I believe," it says, "it's a billfish."
 
+You can set the [default model](https://llm.datasette.io/en/stable/setup.html#setting-a-custom-default-model) to avoid the extra `-m` option:
+
+```bash
+llm models default gemini-2.0-flash
+llm "A joke about a pelican and a walrus"
+```
+
 Other models are:
 
 - `gemini-1.5-flash-latest`
 - `gemini-1.5-flash-8b-latest` - the least expensive
+- `gemini-1.5-pro-latest` - Gemini 1.5 Pro
 - `gemini-exp-1114` - recent experimental #1
 - `gemini-exp-1121` - recent experimental #2
 - `gemini-exp-1206` - recent experimental #3
@@ -47,7 +55,6 @@ Other models are:
 - `learnlm-1.5-pro-experimental` - "an experimental task-specific model that has been trained to align with learning science principles" - [more details here](https://ai.google.dev/gemini-api/docs/learnlm).
 - `gemini-2.0-flash-thinking-exp-1219` - experimental "thinking" model from December 2024
 - `gemini-2.0-flash-thinking-exp-01-21` - experimental "thinking" model from January 2025
-- `gemini-2.0-flash` - Gemini 2.0 Flash
 - `gemini-2.0-flash-lite` - Gemini 2.0 Flash-Lite
 - `gemini-2.0-pro-exp-02-05` - experimental release of Gemini 2.0 Pro
 
@@ -56,23 +63,23 @@ Other models are:
 Gemini models are multi-modal. You can provide images, audio or video files as input like this:
 
 ```bash
-llm -m gemini-1.5-flash-latest 'extract text' -a image.jpg
+llm -m gemini-2.0-flash 'extract text' -a image.jpg
 ```
 Or with a URL:
 ```bash
-llm -m gemini-1.5-flash-8b-latest 'describe image' \
+llm -m gemini-1.5-flash-lite 'describe image' \
   -a https://static.simonwillison.net/static/2024/pelicans.jpg
 ```
 Audio works too:
 
 ```bash
-llm -m gemini-1.5-pro-latest 'transcribe audio' -a audio.mp3
+llm -m gemini-2.0-flash 'transcribe audio' -a audio.mp3
 ```
 
 And video:
 
 ```bash
-llm -m gemini-1.5-pro-latest 'describe what happens' -a video.mp4
+llm -m gemini-2.0-flash 'describe what happens' -a video.mp4
 ```
 The Gemini prompting guide includes [extensive advice](https://ai.google.dev/gemini-api/docs/file-prompting-strategies) on multi-modal prompting.
 
@@ -81,7 +88,7 @@ The Gemini prompting guide includes [extensive advice](https://ai.google.dev/gem
 Use `-o json_object 1` to force the output to be JSON:
 
 ```bash
-llm -m gemini-1.5-flash-latest -o json_object 1 \
+llm -m gemini-2.0-flash -o json_object 1 \
   '3 largest cities in California, list of {"name": "..."}'
 ```
 Outputs:
@@ -96,7 +103,7 @@ Gemini models can [write and execute code](https://ai.google.dev/gemini-api/docs
 To enable this feature, use `-o code_execution 1`:
 
 ```bash
-llm -m gemini-1.5-pro-latest -o code_execution 1 \
+llm -m gemini-2.0-flash -o code_execution 1 \
 'use python to calculate (factorial of 13) * 3'
 ```
 ### Google search
@@ -108,7 +115,7 @@ Using this feature may incur additional requirements in terms of how you use the
 To run a prompt with Google search enabled, use `-o google_search 1`:
 
 ```bash
-llm -m gemini-1.5-pro-latest -o google_search 1 \
+llm -m gemini-2.0-flash -o google_search 1 \
   'What happened in Ireland today?'
 ```
 
@@ -119,7 +126,7 @@ Use `llm logs -c --json` after running a prompt to see the full JSON response, w
 To chat interactively with the model, run `llm chat`:
 
 ```bash
-llm chat -m gemini-1.5-pro-latest
+llm chat -m gemini-2.0-flash
 ```
 
 ## Embeddings
@@ -182,4 +189,3 @@ You will need to have stored a valid Gemini API key using this command first:
 llm keys set gemini
 # Paste key here
 ```
-
