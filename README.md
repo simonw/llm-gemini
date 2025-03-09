@@ -67,7 +67,7 @@ llm -m gemini-2.0-flash 'extract text' -a image.jpg
 ```
 Or with a URL:
 ```bash
-llm -m gemini-1.5-flash-lite 'describe image' \
+llm -m gemini-2.0-flash-lite 'describe image' \
   -a https://static.simonwillison.net/static/2024/pelicans.jpg
 ```
 Audio works too:
