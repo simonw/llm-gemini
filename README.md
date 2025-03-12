@@ -50,6 +50,7 @@ Other models are:
 - `gemini-2.0-flash` - Gemini 2.0 Flash
 - `gemini-2.0-flash-lite` - Gemini 2.0 Flash-Lite
 - `gemini-2.0-pro-exp-02-05` - experimental release of Gemini 2.0 Pro
+- `gemma-3-27b-it` - [Gemma 3](https://blog.google/technology/developers/gemma-3/) 27B
 
 ### Images, audio and video
 
