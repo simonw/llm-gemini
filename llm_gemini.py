@@ -1,6 +1,8 @@
+import click
 import copy
 import httpx
 import ijson
+import json
 import llm
 from pydantic import Field
 from typing import Optional
@@ -437,3 +439,21 @@ class GeminiEmbeddingModel(llm.EmbeddingModel):
         if self.truncate:
             values = [value[: self.truncate] for value in values]
         return values
+
+
+@llm.hookimpl
+def register_commands(cli):
+    @cli.group()
+    def gemini():
+        "Commands relating to the llm-gemini plugin"
+
+    @gemini.command()
+    @click.option("--key", help="API key to use")
+    def models(key):
+        "List of Gemini models pulled from their API"
+        key = llm.get_key(key, "gemini", "LLM_GEMINI_KEY")
+        response = httpx.get(
+            f"https://generativelanguage.googleapis.com/v1beta/models?key={key}",
+        )
+        response.raise_for_status()
+        click.echo(json.dumps(response.json(), indent=2))
