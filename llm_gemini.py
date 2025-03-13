@@ -458,7 +458,7 @@ def register_commands(cli):
             f"https://generativelanguage.googleapis.com/v1beta/models?key={key}",
         )
         response.raise_for_status()
-        click.echo(json.dumps(response.json(), indent=2))
+        click.echo(json.dumps(response.json()["models"], indent=2))
 
     @gemini.command()
     @click.option("--key", help="API key to use")
@@ -469,4 +469,4 @@ def register_commands(cli):
             f"https://generativelanguage.googleapis.com/v1beta/files?key={key}",
         )
         response.raise_for_status()
-        click.echo(json.dumps(response.json(), indent=2))
+        click.echo(json.dumps(response.json()["files"], indent=2))
