@@ -459,3 +459,14 @@ def register_commands(cli):
         )
         response.raise_for_status()
         click.echo(json.dumps(response.json(), indent=2))
+
+    @gemini.command()
+    @click.option("--key", help="API key to use")
+    def files(key):
+        "List of files uploaded to the Gemini API"
+        key = llm.get_key(key, "gemini", "LLM_GEMINI_KEY")
+        response = httpx.get(
+            f"https://generativelanguage.googleapis.com/v1beta/files?key={key}",
+        )
+        response.raise_for_status()
+        click.echo(json.dumps(response.json(), indent=2))
