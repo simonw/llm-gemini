@@ -199,6 +199,10 @@ class _SharedGemini:
             description="Output a valid JSON object {...}",
             default=None,
         )
+        audio_timestamp: bool = Field(
+            description="Request accurate audio timestamps",
+            default=None,
+        )
 
     class OptionsWithGoogleSearch(Options):
         google_search: Optional[bool] = Field(
@@ -257,6 +261,9 @@ class _SharedGemini:
             "contents": self.build_messages(prompt, conversation),
             "safetySettings": SAFETY_SETTINGS,
         }
+        generation_config = {}
+        if prompt.options and prompt.options.audio_timestamp:
+            generation_config["audioTimestamp"] = True
         if prompt.options and prompt.options.code_execution:
             body["tools"] = [{"codeExecution": {}}]
         if prompt.options and self.can_google_search and prompt.options.google_search:
@@ -265,10 +272,12 @@ class _SharedGemini:
             body["systemInstruction"] = {"parts": [{"text": prompt.system}]}
 
         if prompt.schema:
-            body["generationConfig"] = {
-                "response_mime_type": "application/json",
-                "response_schema": cleanup_schema(copy.deepcopy(prompt.schema)),
-            }
+            generation_config.update(
+                {
+                    "response_mime_type": "application/json",
+                    "response_schema": cleanup_schema(copy.deepcopy(prompt.schema)),
+                }
+            )
 
         config_map = {
             "temperature": "temperature",
@@ -276,17 +285,18 @@ class _SharedGemini:
             "top_p": "topP",
             "top_k": "topK",
         }
-        if prompt.options and prompt.options.json_object:
-            body["generationConfig"] = {"response_mime_type": "application/json"}
+        if prompt.options and prompt.options.json_object and not prompt.schema:
+            generation_config["response_mime_type"] = "application/json"
 
         if any(
             getattr(prompt.options, key, None) is not None for key in config_map.keys()
         ):
-            generation_config = {}
             for key, other_key in config_map.items():
                 config_value = getattr(prompt.options, key, None)
                 if config_value is not None:
                     generation_config[other_key] = config_value
+
+        if generation_config:
             body["generationConfig"] = generation_config
 
         return body
