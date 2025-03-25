@@ -66,6 +66,8 @@ def register_models(register):
         "gemini-2.0-flash-lite",
         # Released 12th March 2025:
         "gemma-3-27b-it",
+        # 25th March 2025:
+        "gemini-2.5-pro-exp-03-25",
     ]:
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         register(
