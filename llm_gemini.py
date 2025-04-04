@@ -68,6 +68,8 @@ def register_models(register):
         "gemma-3-27b-it",
         # 25th March 2025:
         "gemini-2.5-pro-exp-03-25",
+        # 4th April 2025 (paid):
+        "gemini-2.5-pro-preview-03-25",
     ]:
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         register(

@@ -43,6 +43,9 @@ llm "A joke about a pelican and a walrus"
 
 Other models are:
 
+- `gemini-2.5-pro-exp-03-25` - free experimental release of Gemini 2.5 Pro
+- `gemini-2.5-pro-preview-03-25` - paid preview of Gemini 2.5 Pro
+- `gemma-3-27b-it` - [Gemma 3](https://blog.google/technology/developers/gemma-3/) 27B
 - `gemini-2.0-pro-exp-02-05` - experimental release of Gemini 2.0 Pro
 - `gemini-2.0-flash-lite` - Gemini 2.0 Flash-Lite
 - `gemini-2.0-flash` - Gemini 2.0 Flash
