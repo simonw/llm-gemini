@@ -1,6 +1,8 @@
+import click
 import copy
 import httpx
 import ijson
+import json
 import llm
 from pydantic import Field
 from typing import Optional
@@ -62,6 +64,10 @@ def register_models(register):
         "gemini-2.0-pro-exp-02-05",
         # Released 25th Feb 2025:
         "gemini-2.0-flash-lite",
+        # Released 12th March 2025:
+        "gemma-3-27b-it",
+        # 25th March 2025:
+        "gemini-2.5-pro-exp-03-25",
     ]:
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         register(
@@ -437,3 +443,32 @@ class GeminiEmbeddingModel(llm.EmbeddingModel):
         if self.truncate:
             values = [value[: self.truncate] for value in values]
         return values
+
+
+@llm.hookimpl
+def register_commands(cli):
+    @cli.group()
+    def gemini():
+        "Commands relating to the llm-gemini plugin"
+
+    @gemini.command()
+    @click.option("--key", help="API key to use")
+    def models(key):
+        "List of Gemini models pulled from their API"
+        key = llm.get_key(key, "gemini", "LLM_GEMINI_KEY")
+        response = httpx.get(
+            f"https://generativelanguage.googleapis.com/v1beta/models?key={key}",
+        )
+        response.raise_for_status()
+        click.echo(json.dumps(response.json()["models"], indent=2))
+
+    @gemini.command()
+    @click.option("--key", help="API key to use")
+    def files(key):
+        "List of files uploaded to the Gemini API"
+        key = llm.get_key(key, "gemini", "LLM_GEMINI_KEY")
+        response = httpx.get(
+            f"https://generativelanguage.googleapis.com/v1beta/files?key={key}",
+        )
+        response.raise_for_status()
+        click.echo(json.dumps(response.json()["files"], indent=2))

@@ -27,14 +27,12 @@ You can also set the API key by assigning it to the environment variable `LLM_GE
 Now run the model using `-m gemini-2.0-flash`, for example:
 
 ```bash
-llm -m gemini-2.0-flash "A joke about a pelican and a walrus"
+llm -m gemini-2.0-flash "A short joke about a pelican and a walrus"
 ```
 
-> A pelican walks into a seafood restaurant with a huge fish hanging out of its beak.  The walrus, sitting at the bar, eyes it enviously.
+> A pelican and a walrus are sitting at a bar. The pelican orders a fishbowl cocktail, and the walrus orders a plate of clams. The bartender asks, "So, what brings you two together?"
 >
-> "Hey," the walrus says, "That looks delicious! What kind of fish is that?"
->
-> The pelican taps its beak thoughtfully. "I believe," it says, "it's a billfish."
+> The walrus sighs and says, "It's a long story. Let's just say we met through a mutual friend... of the fin."
 
 You can set the [default model](https://llm.datasette.io/en/stable/setup.html#setting-a-custom-default-model) to avoid the extra `-m` option:
 
@@ -45,18 +43,18 @@ llm "A joke about a pelican and a walrus"
 
 Other models are:
 
-- `gemini-1.5-flash-latest`
-- `gemini-1.5-flash-8b-latest` - the least expensive
-- `gemini-1.5-pro-latest` - Gemini 1.5 Pro
-- `gemini-exp-1114` - recent experimental #1
-- `gemini-exp-1121` - recent experimental #2
-- `gemini-exp-1206` - recent experimental #3
-- `gemini-2.0-flash-exp` - [Gemini 2.0 Flash](https://blog.google/technology/google-deepmind/google-gemini-ai-update-december-2024/#gemini-2-0-flash)
-- `learnlm-1.5-pro-experimental` - "an experimental task-specific model that has been trained to align with learning science principles" - [more details here](https://ai.google.dev/gemini-api/docs/learnlm).
-- `gemini-2.0-flash-thinking-exp-1219` - experimental "thinking" model from December 2024
-- `gemini-2.0-flash-thinking-exp-01-21` - experimental "thinking" model from January 2025
-- `gemini-2.0-flash-lite` - Gemini 2.0 Flash-Lite
 - `gemini-2.0-pro-exp-02-05` - experimental release of Gemini 2.0 Pro
+- `gemini-2.0-flash-lite` - Gemini 2.0 Flash-Lite
+- `gemini-2.0-flash` - Gemini 2.0 Flash
+- `gemini-2.0-flash-thinking-exp-01-21` - experimental "thinking" model from January 2025
+- `gemini-2.0-flash-thinking-exp-1219` - experimental "thinking" model from December 2024
+- `learnlm-1.5-pro-experimental` - "an experimental task-specific model that has been trained to align with learning science principles" - [more details here](https://ai.google.dev/gemini-api/docs/learnlm).
+- `gemini-2.0-flash-exp` - [Gemini 2.0 Flash](https://blog.google/technology/google-deepmind/google-gemini-ai-update-december-2024/#gemini-2-0-flash)
+- `gemini-exp-1206` - recent experimental #3
+- `gemini-exp-1121` - recent experimental #2
+- `gemini-exp-1114` - recent experimental #1
+- `gemini-1.5-flash-8b-latest` - the least expensive
+- `gemini-1.5-flash-latest`
 
 ### Images, audio and video
 
