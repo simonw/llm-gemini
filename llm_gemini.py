@@ -43,6 +43,16 @@ THINKING_BUDGET_MODELS = {
     "gemini-2.5-flash-preview-04-17",
 }
 
+GOOGLE_SEARCH_TOOL_NAMES = {
+    "gemini-1.5-pro-latest": "google_search_retrieval",
+    "gemini-1.5-flash-latest": "google_search_retrieval",
+    "gemini-1.5-pro-001": "google_search_retrieval",
+    "gemini-1.5-flash-001": "google_search_retrieval",
+    "gemini-1.5-pro-002": "google_search_retrieval",
+    "gemini-1.5-flash-002": "google_search_retrieval",
+    "gemini-2.0-flash-exp": "google_search_retrieval",
+    "gemini-2.0-flash": "google_search",
+}
 
 @llm.hookimpl
 def register_models(register):
@@ -287,7 +297,7 @@ class _SharedGemini:
         if prompt.options and prompt.options.code_execution:
             body["tools"] = [{"codeExecution": {}}]
         if prompt.options and self.can_google_search and prompt.options.google_search:
-            body["tools"] = [{"google_search": {}}]
+            body["tools"] = [{GOOGLE_SEARCH_TOOL_NAMES[self.model_id]: {}}]
         if prompt.system:
             body["systemInstruction"] = {"parts": [{"text": prompt.system}]}
 
