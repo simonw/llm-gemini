@@ -36,6 +36,7 @@ GOOGLE_SEARCH_MODELS = {
     "gemini-1.5-flash-002",
     "gemini-2.0-flash-exp",
     "gemini-2.0-flash",
+    "gemini-2.5-pro-preview-03-25",
 }
 THINKING_BUDGET_MODELS = {
     "gemini-2.5-flash-preview-04-17",
