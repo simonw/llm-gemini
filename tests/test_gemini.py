@@ -1,4 +1,6 @@
+from click.testing import CliRunner
 import llm
+from llm.cli import cli
 import nest_asyncio
 import json
 import os
@@ -210,3 +212,22 @@ def test_cleanup_schema(schema, expected):
     # Use a deep copy so the original test data remains unchanged.
     result = cleanup_schema(schema)
     assert result == expected
+
+
+@pytest.mark.vcr
+def test_cli_gemini_models(tmpdir, monkeypatch):
+    user_dir = tmpdir / "llm.datasette.io"
+    user_dir.mkdir()
+    monkeypatch.setenv("LLM_USER_PATH", str(user_dir))
+    # With no key set should error nicely
+    runner = CliRunner()
+    result = runner.invoke(cli, ["gemini", "models"])
+    assert result.exit_code == 1
+    assert (
+        "Error: You must set the LLM_GEMINI_KEY environment variable or use --key\n"
+        == result.output
+    )
+    # Try again with --key
+    result2 = runner.invoke(cli, ["gemini", "models", "--key", GEMINI_API_KEY])
+    assert result2.exit_code == 0
+    assert "gemini-1.5-flash-latest" in result2.output

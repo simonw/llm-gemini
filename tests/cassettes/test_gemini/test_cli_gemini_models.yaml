@@ -1,0 +1,84 @@
+interactions:
+- request:
+    body: ''
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - python-httpx/0.25.2
+    method: GET
+    uri: https://generativelanguage.googleapis.com/v1beta/models
+  response:
+    body:
+      string: !!binary |
+        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
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Thu, 17 Apr 2025 23:41:22 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=48
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

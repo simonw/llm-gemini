@@ -490,9 +490,12 @@ def register_commands(cli):
     def models(key):
         "List of Gemini models pulled from their API"
         key = llm.get_key(key, "gemini", "LLM_GEMINI_KEY")
-        response = httpx.get(
-            f"https://generativelanguage.googleapis.com/v1beta/models?key={key}",
-        )
+        if not key:
+            raise click.ClickException(
+                "You must set the LLM_GEMINI_KEY environment variable or use --key"
+            )
+        url = f"https://generativelanguage.googleapis.com/v1beta/models"
+        response = httpx.get(url, headers={"x-goog-api-key": key})
         response.raise_for_status()
         click.echo(json.dumps(response.json()["models"], indent=2))
 
