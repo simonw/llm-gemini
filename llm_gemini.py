@@ -37,6 +37,9 @@ GOOGLE_SEARCH_MODELS = {
     "gemini-2.0-flash-exp",
     "gemini-2.0-flash",
 }
+THINKING_BUDGET_MODELS = {
+    "gemini-2.5-flash-preview-04-17",
+}
 
 
 @llm.hookimpl
@@ -74,15 +77,18 @@ def register_models(register):
         "gemini-2.5-flash-preview-04-17",
     ]:
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
+        can_thinking_budget = model_id in THINKING_BUDGET_MODELS
         register(
             GeminiPro(
                 model_id,
                 can_google_search=can_google_search,
+                can_thinking_budget=can_thinking_budget,
                 can_schema="flash-thinking" not in model_id,
             ),
             AsyncGeminiPro(
                 model_id,
                 can_google_search=can_google_search,
+                can_thinking_budget=can_thinking_budget,
                 can_schema="flash-thinking" not in model_id,
             ),
         )
@@ -210,12 +216,27 @@ class _SharedGemini:
             default=None,
         )
 
-    def __init__(self, model_id, can_google_search=False, can_schema=False):
+    class OptionsWithThinkingBudget(OptionsWithGoogleSearch):
+        thinking_budget: Optional[int] = Field(
+            description="Indicates the thinking budget in tokens. Set to 0 to disable.",
+            default=None,
+        )
+
+    def __init__(
+        self,
+        model_id,
+        can_google_search=False,
+        can_thinking_budget=False,
+        can_schema=False,
+    ):
         self.model_id = model_id
         self.can_google_search = can_google_search
         self.supports_schema = can_schema
         if can_google_search:
             self.Options = self.OptionsWithGoogleSearch
+        self.can_thinking_budget = can_thinking_budget
+        if can_thinking_budget:
+            self.Options = self.OptionsWithThinkingBudget
 
     def build_messages(self, prompt, conversation):
         messages = []
@@ -268,10 +289,18 @@ class _SharedGemini:
         if prompt.system:
             body["systemInstruction"] = {"parts": [{"text": prompt.system}]}
 
+        generation_config = {}
+
         if prompt.schema:
-            body["generationConfig"] = {
-                "response_mime_type": "application/json",
-                "response_schema": cleanup_schema(copy.deepcopy(prompt.schema)),
+            generation_config.update(
+                {
+                    "response_mime_type": "application/json",
+                    "response_schema": cleanup_schema(copy.deepcopy(prompt.schema)),
+                }
+            )
+        if self.can_thinking_budget and prompt.options.thinking_budget is not None:
+            generation_config["thinking_config"] = {
+                "thinking_budget": prompt.options.thinking_budget
             }
 
         config_map = {
@@ -281,16 +310,17 @@ class _SharedGemini:
             "top_k": "topK",
         }
         if prompt.options and prompt.options.json_object:
-            body["generationConfig"] = {"response_mime_type": "application/json"}
+            generation_config["response_mime_type"] = "application/json"
 
         if any(
             getattr(prompt.options, key, None) is not None for key in config_map.keys()
         ):
-            generation_config = {}
             for key, other_key in config_map.items():
                 config_value = getattr(prompt.options, key, None)
                 if config_value is not None:
                     generation_config[other_key] = config_value
+
+        if generation_config:
             body["generationConfig"] = generation_config
 
         return body
