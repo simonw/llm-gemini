@@ -227,6 +227,14 @@ class _SharedGemini:
             description="Output a valid JSON object {...}",
             default=None,
         )
+        timeout: Optional[int] = Field(
+            description=(
+                "The maximum time in seconds to wait for a response. "
+                "If the model does not respond within this time, "
+                "the request will be aborted."
+            ),
+            default=None,
+        )
 
     class OptionsWithGoogleSearch(Options):
         google_search: Optional[bool] = Field(
@@ -388,7 +396,7 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
         with httpx.stream(
             "POST",
             url,
-            timeout=None,
+            timeout=prompt.options.timeout,
             headers={"x-goog-api-key": self.get_key(key)},
             json=body,
         ) as http_response:
@@ -420,7 +428,7 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
             async with client.stream(
                 "POST",
                 url,
-                timeout=None,
+                timeout=prompt.options.timeout,
                 headers={"x-goog-api-key": self.get_key(key)},
                 json=body,
             ) as http_response:
