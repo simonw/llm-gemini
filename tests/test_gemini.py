@@ -46,6 +46,7 @@ async def test_prompt():
         "modelVersion": "gemini-1.5-flash-latest",
     }
     assert response.token_details == {
+        "candidatesTokenCount": 2,
         "promptTokensDetails": [{"modality": "TEXT", "tokenCount": 9}],
         "candidatesTokensDetails": [{"modality": "TEXT", "tokenCount": 2}],
     }

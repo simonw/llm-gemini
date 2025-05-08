@@ -369,7 +369,10 @@ class _SharedGemini:
                 candidate.pop("content", None)
             usage = response.response_json.pop("usageMetadata")
             input_tokens = usage.pop("promptTokenCount", None)
-            output_tokens = usage.pop("candidatesTokenCount", None)
+            # See https://github.com/simonw/llm-gemini/issues/75#issuecomment-2861827509
+            candidates_token_count = usage.get("candidatesTokenCount") or 0
+            thoughts_token_count = usage.get("thoughtsTokenCount") or 0
+            output_tokens = candidates_token_count + thoughts_token_count
             usage.pop("totalTokenCount", None)
             if input_tokens is not None:
                 response.set_usage(
