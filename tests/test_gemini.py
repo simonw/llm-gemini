@@ -232,3 +232,27 @@ def test_cli_gemini_models(tmpdir, monkeypatch):
     result2 = runner.invoke(cli, ["gemini", "models", "--key", GEMINI_API_KEY])
     assert result2.exit_code == 0
     assert "gemini-1.5-flash-latest" in result2.output
+
+
+@pytest.mark.vcr
+def test_tools():
+    model = llm.get_model("gemini-2.0-flash")
+    names = ["Charles", "Sammy"]
+    chain_response = model.chain(
+        "Two names for a pet pelican",
+        tools=[
+            llm.Tool.function(lambda: names.pop(0), name="pelican_name_generator"),
+        ],
+        key=GEMINI_API_KEY,
+    )
+    text = chain_response.text()
+    assert text == "Okay, here are two names for a pet pelican: Charles and Sammy.\n"
+    # This one did three
+    assert len(chain_response._responses) == 3
+    first, second, third = chain_response._responses
+    assert len(first.tool_calls()) == 1
+    assert first.tool_calls()[0].name == "pelican_name_generator"
+    assert len(second.tool_calls()) == 1
+    assert second.tool_calls()[0].name == "pelican_name_generator"
+    assert second.prompt.tool_results[0].output == "Charles"
+    assert third.prompt.tool_results[0].output == "Sammy"

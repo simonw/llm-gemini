@@ -289,7 +289,10 @@ class _SharedGemini:
                         ]
                     )
                 messages.append({"role": "user", "parts": parts})
-                model_parts = [{"text": response.text_or_raise()}]
+                model_parts = []
+                response_text = response.text_or_raise()
+                if response_text:
+                    model_parts.append({"text": response_text})
                 tool_calls = response.tool_calls_or_raise()
                 if tool_calls:
                     model_parts.extend(
