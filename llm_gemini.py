@@ -148,6 +148,7 @@ class _SharedGemini:
     key_env_var = "LLM_GEMINI_KEY"
     can_stream = True
     supports_schema = True
+    supports_tools = True
 
     attachment_types = (
         # Text
@@ -273,14 +274,57 @@ class _SharedGemini:
                     )
                 if response.prompt.prompt:
                     parts.append({"text": response.prompt.prompt})
+                if response.prompt.tool_results:
+                    parts.extend(
+                        [
+                            {
+                                "function_response": {
+                                    "name": tool_result.name,
+                                    "response": {
+                                        "output": tool_result.output,
+                                    },
+                                }
+                            }
+                            for tool_result in response.prompt.tool_results
+                        ]
+                    )
                 messages.append({"role": "user", "parts": parts})
-                messages.append(
-                    {"role": "model", "parts": [{"text": response.text_or_raise()}]}
-                )
+                model_parts = []
+                response_text = response.text_or_raise()
+                if response_text:
+                    model_parts.append({"text": response_text})
+                tool_calls = response.tool_calls_or_raise()
+                if tool_calls:
+                    model_parts.extend(
+                        [
+                            {
+                                "function_call": {
+                                    "name": tool_call.name,
+                                    "args": tool_call.arguments,
+                                }
+                            }
+                            for tool_call in tool_calls
+                        ]
+                    )
+                messages.append({"role": "model", "parts": model_parts})
 
         parts = []
         if prompt.prompt:
             parts.append({"text": prompt.prompt})
+        if prompt.tool_results:
+            parts.extend(
+                [
+                    {
+                        "function_response": {
+                            "name": tool_result.name,
+                            "response": {
+                                "output": tool_result.output,
+                            },
+                        }
+                    }
+                    for tool_result in prompt.tool_results
+                ]
+            )
         for attachment in prompt.attachments:
             mime_type = resolve_type(attachment)
             parts.append(
@@ -300,17 +344,34 @@ class _SharedGemini:
             "contents": self.build_messages(prompt, conversation),
             "safetySettings": SAFETY_SETTINGS,
         }
+        if prompt.system:
+            body["systemInstruction"] = {"parts": [{"text": prompt.system}]}
+
+        tools = []
         if prompt.options and prompt.options.code_execution:
-            body["tools"] = [{"codeExecution": {}}]
+            tools.append({"codeExecution": {}})
         if prompt.options and self.can_google_search and prompt.options.google_search:
             tool_name = (
                 "google_search_retrieval"
                 if self.model_id in GOOGLE_SEARCH_MODELS_USING_SEARCH_RETRIEVAL
                 else "google_search"
             )
-            body["tools"] = [{tool_name: {}}]
-        if prompt.system:
-            body["systemInstruction"] = {"parts": [{"text": prompt.system}]}
+            tools.append({tool_name: {}})
+        if prompt.tools:
+            tools.append(
+                {
+                    "functionDeclarations": [
+                        {
+                            "name": tool.name,
+                            "description": tool.description,
+                            "parameters": tool.input_schema,
+                        }
+                        for tool in prompt.tools
+                    ]
+                }
+            )
+        if tools:
+            body["tools"] = tools
 
         generation_config = {}
 
@@ -321,6 +382,7 @@ class _SharedGemini:
                     "response_schema": cleanup_schema(copy.deepcopy(prompt.schema)),
                 }
             )
+
         if self.can_thinking_budget and prompt.options.thinking_budget is not None:
             generation_config["thinking_config"] = {
                 "thinking_budget": prompt.options.thinking_budget
@@ -348,7 +410,14 @@ class _SharedGemini:
 
         return body
 
-    def process_part(self, part):
+    def process_part(self, part, response):
+        if "functionCall" in part:
+            response.add_tool_call(
+                llm.ToolCall(
+                    name=part["functionCall"]["name"],
+                    arguments=part["functionCall"]["args"],
+                )
+            )
         if "text" in part:
             return part["text"]
         elif "executableCode" in part:
@@ -357,10 +426,10 @@ class _SharedGemini:
             return f'```\n{part["codeExecutionResult"]["output"].strip()}\n```\n'
         return ""
 
-    def process_candidates(self, candidates):
+    def process_candidates(self, candidates, response):
         # We only use the first candidate
         for part in candidates[0]["content"]["parts"]:
-            yield self.process_part(part)
+            yield self.process_part(part, response)
 
     def set_usage(self, response):
         try:
@@ -404,7 +473,9 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
                         if isinstance(event, dict) and "error" in event:
                             raise llm.ModelError(event["error"]["message"])
                         try:
-                            yield from self.process_candidates(event["candidates"])
+                            yield from self.process_candidates(
+                                event["candidates"], response
+                            )
                         except KeyError:
                             yield ""
                         gathered.append(event)
@@ -437,7 +508,7 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                                 raise llm.ModelError(event["error"]["message"])
                             try:
                                 for chunk in self.process_candidates(
-                                    event["candidates"]
+                                    event["candidates"], response
                                 ):
                                     yield chunk
                             except KeyError:

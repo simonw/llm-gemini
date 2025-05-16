@@ -1,0 +1,202 @@
+interactions:
+- request:
+    body: '{"contents": [{"role": "user", "parts": [{"text": "Two names for a pet
+      pelican"}]}], "safetySettings": [{"category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+      "threshold": "BLOCK_NONE"}, {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+      "threshold": "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold":
+      "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"}],
+      "tools": [{"functionDeclarations": [{"name": "pelican_name_generator", "description":
+      null, "parameters": {"properties": {}, "type": "object"}}]}]}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '543'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - python-httpx/0.25.2
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/7xTTWuDQBC9+ytkz0npBwTamzWLEYwGtSUhBJkkq1m67opuDkH8712NJtr20lLi
+        YZ2PN/N2dN661HQd7YDv6R4kKdCLvlYRXS+bs84JLgmXKtGFVDCDXF6x56fs2QoSH/lOUsFNYGxQ
+        3OY5pETFUUYYVfxR7UcJ4SQHKXI0+oqHPKkZy2qQ6HtXe3OtRrlgDU8q9oShNl51ABRTTouDT6AQ
+        vIYFobe4kKMCYiJPPkjKk+G8/XnU95MkEfmpbjAz/HlkGiG2PH8VzZQRBQuMzdlgJJTlYgtbyqhs
+        qlxsObZlvzoYXVDV6LdsU8O1sO+9BZHpuSF2wxtwKs8IgvltyAK8fDMcZxXh5cKxTfsPnK210Tqv
+        WRZ0LCAhcyJByQAu+1p3TDMZig/CTXFsZPDwdObsqWaQn7RpKSSwYeXz6FvXYqo4KesvV09nammh
+        mybEy/64qv/gUt1mN+/Nz1f8J7LJkEtr/+RZYu8kL+hZSwlJlbrGj3f345hBcUBapX0CAAD//4oF
+        AAAA//8DAKxT2SpyBAAA
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Wed, 14 May 2025 02:16:16 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=448
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"role": "user", "parts": [{"text": "Two names for a pet
+      pelican"}]}, {"role": "model", "parts": [{"function_call": {"name": "pelican_name_generator",
+      "args": {}}}]}, {"role": "user", "parts": [{"function_response": {"name": "pelican_name_generator",
+      "response": {"output": "Charles"}}}]}], "safetySettings": [{"category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+      "threshold": "BLOCK_NONE"}, {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+      "threshold": "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold":
+      "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"}],
+      "tools": [{"functionDeclarations": [{"name": "pelican_name_generator", "description":
+      null, "parameters": {"properties": {}, "type": "object"}}]}]}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '763'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - python-httpx/0.25.2
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/7xTTW+CQBC98yvInrVpNLFJbxQ3SIIfAWw0xpBRF9x03TWwHgzhv3f5UrbtpU0j
+        h2Vm3sy8HZi3yQ3TRHvgB3oASTL0am5UxDTz6iwxwSXhUgFtSAXPkMp7bv3kHVulxBe+l1RwGxjT
+        ihucw4moODoTRhV/VPpRQjhJQYoU9b7mQ5qUjHmhAV3vbm/v1SgVrOI5iQNhqIkXbQKKKafZ0SeQ
+        CV6mBeF8cSNHGcREXn2QlCf6vN151PeTJBHptWwwsfxpZFshdub+OpooIwoWGNsTbSR0TsUOdpRR
+        WVXNsOO5jvvmYXTLKnq/ZRtbMwf782UQ2fNZiGfhAziVZwXB9DFkAV4tLc9bR3i18Fzb/QNnY22N
+        1quWBV0ySMiUSFAygNu+lh1PZxmKD8JtcalkMHipOTuq0fBRA0shgWnIcNj71jUbK07KusvV0Zla
+        WminCfGqO67qr12q3ezqvf35iv9ENtK5jOZP1hJ7J2lGay0l5KTU1R88PfdjBtkRGYXxCQAA//+K
+        BQAAAP//AwBkynAqcgQAAA==
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Wed, 14 May 2025 02:16:16 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=465
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents": [{"role": "user", "parts": [{"text": "Two names for a pet
+      pelican"}]}, {"role": "model", "parts": [{"function_call": {"name": "pelican_name_generator",
+      "args": {}}}]}, {"role": "user", "parts": [{"function_response": {"name": "pelican_name_generator",
+      "response": {"output": "Charles"}}}]}, {"role": "model", "parts": [{"function_call":
+      {"name": "pelican_name_generator", "args": {}}}]}, {"role": "user", "parts":
+      [{"function_response": {"name": "pelican_name_generator", "response": {"output":
+      "Sammy"}}}]}], "safetySettings": [{"category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+      "threshold": "BLOCK_NONE"}, {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+      "threshold": "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold":
+      "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"}],
+      "tools": [{"functionDeclarations": [{"name": "pelican_name_generator", "description":
+      null, "parameters": {"properties": {}, "type": "object"}}]}]}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '981'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - python-httpx/0.25.2
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/7xSUWvCMBB+768Iea5jDPawvXU11EJtpa1DESnnPGuwNpJGmEj/+5K6zgh72R7M
+        Q7jc3fd9d+FbnB1C6AfUa74GhQ19JQudIeTc3aYmaoW10oU+pZMHkOraezlnK9YtCj8NiCY7OLlk
+        ixIJSKRWU/sTL90rtRQVGtxerLHq29u+gTawQXVKQfG6vJ3A1tcbKSyFPBmmkZeOC9/LWZCk82Kk
+        gyKbMOaPqGtDDlKsYMUrrjpUzIIoDMK3iF1nbt2/qg29OGBpMs0KP4lzFud30NQvL8vG9xHL2Gzq
+        RdG8YLNJFPrhPzS/o6XTvzo70GMDJY5RgTYm/NjPMO4PKhc7rH1x7Iz58nzRpEooqH4vWbBmqEl5
+        ZbvHsrb2HfTj5mxm76P5b6gdewEzfvd9F+e+o2y4qA1LiXte88HTw+NgU0GzpU7rfAEAAP//0uHl
+        onnOUygpz1fIS8xNLVZIyy9SSFQoSC0B4pxMoKVWCs4ZiUU5QCmgAxSCE3NzK/Vi8ijOnWlAjxZn
+        BKUmFkO8HhziH6A0mndJ8eEIy7smhtAMisgJKPKGZjjztqk5zfK2iSFq3sbuRipZZmhGQUECAAAA
+        //+KBQAAAP//AwArGg31wgcAAA==
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Wed, 14 May 2025 02:16:17 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=382
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1
