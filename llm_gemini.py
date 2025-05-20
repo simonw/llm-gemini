@@ -268,14 +268,14 @@ class _SharedGemini:
 
     def __init__(
         self,
-        model_id,
+        gemini_model_id,
         can_vision=True,
         can_google_search=False,
         can_thinking_budget=False,
         can_schema=False,
     ):
-        self.model_id = "gemini/{}".format(model_id)
-        self.model_name = model_id
+        self.model_id = "gemini/{}".format(gemini_model_id)
+        self.gemini_model_id = gemini_model_id
         self.can_google_search = can_google_search
         self.supports_schema = can_schema
         if can_google_search:
@@ -482,7 +482,7 @@ class _SharedGemini:
 
 class GeminiPro(_SharedGemini, llm.KeyModel):
     def execute(self, prompt, stream, response, conversation, key):
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:streamGenerateContent"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model_id}:streamGenerateContent"
         gathered = []
         body = self.build_request_body(prompt, conversation)
 
@@ -515,7 +515,7 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
 
 class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
     async def execute(self, prompt, stream, response, conversation, key):
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:streamGenerateContent"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model_id}:streamGenerateContent"
         gathered = []
         body = self.build_request_body(prompt, conversation)
 
