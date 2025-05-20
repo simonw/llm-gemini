@@ -1,6 +1,6 @@
 [project]
 name = "llm-gemini"
-version = "0.20a1"
+version = "0.20a2"
 description = "LLM plugin to access Google's Gemini family of models"
 readme = "README.md"
 authors = [{name = "Simon Willison"}]
