@@ -155,7 +155,7 @@ def register_models(register):
                 can_vision=can_vision,
                 can_google_search=can_google_search,
                 can_thinking_budget=can_thinking_budget,
-                can_schema=can_schema
+                can_schema=can_schema,
             ),
         )
 
