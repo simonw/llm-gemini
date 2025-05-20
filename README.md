@@ -165,6 +165,21 @@ llm similar readmes -c 'upload csvs to stuff' -d embed.db
 
 See the [LLM embeddings documentation](https://llm.datasette.io/en/stable/embeddings/cli.html) for further details.
 
+## Listing all Gemini API models
+
+The `llm gemini models` command lists all of the models that are exposed by the Gemini API, some of which may not be available through this plugin.
+
+```bash
+llm gemini models
+```
+You can add a `--key X` option to use a different API key.
+
+To filter models by their supported generation methods use `--method` one or more times:
+```bash
+llm gemini models --method embedContent
+```
+If you provide multiple methods you will see models that support any of them.
+
 ## Development
 
 To set up this plugin locally, first checkout the code. Then create a new virtual environment:

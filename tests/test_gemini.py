@@ -232,6 +232,14 @@ def test_cli_gemini_models(tmpdir, monkeypatch):
     result2 = runner.invoke(cli, ["gemini", "models", "--key", GEMINI_API_KEY])
     assert result2.exit_code == 0
     assert "gemini-1.5-flash-latest" in result2.output
+    # And with --method
+    result3 = runner.invoke(
+        cli, ["gemini", "models", "--key", GEMINI_API_KEY, "--method", "embedContent"]
+    )
+    assert result3.exit_code == 0
+    models = json.loads(result3.output)
+    for model in models:
+        assert "embedContent" in model["supportedGenerationMethods"]
 
 
 @pytest.mark.vcr

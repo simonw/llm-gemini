@@ -588,8 +588,20 @@ def register_commands(cli):
 
     @gemini.command()
     @click.option("--key", help="API key to use")
-    def models(key):
-        "List of Gemini models pulled from their API"
+    @click.option(
+        "methods",
+        "--method",
+        multiple=True,
+        help="Filter by supported generation methods",
+    )
+    def models(key, methods):
+        """
+        List of Gemini models pulled from their API
+
+        Use --method to filter by supported generation methods for example:
+
+        llm gemini models --method generateContent --method embedContent
+        """
         key = llm.get_key(key, "gemini", "LLM_GEMINI_KEY")
         if not key:
             raise click.ClickException(
@@ -598,7 +610,16 @@ def register_commands(cli):
         url = f"https://generativelanguage.googleapis.com/v1beta/models"
         response = httpx.get(url, headers={"x-goog-api-key": key})
         response.raise_for_status()
-        click.echo(json.dumps(response.json()["models"], indent=2))
+        models = response.json()["models"]
+        if methods:
+            models = [
+                model
+                for model in models
+                if any(
+                    method in model["supportedGenerationMethods"] for method in methods
+                )
+            ]
+        click.echo(json.dumps(models, indent=2))
 
     @gemini.command()
     @click.option("--key", help="API key to use")
