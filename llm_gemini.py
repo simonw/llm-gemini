@@ -59,11 +59,47 @@ THINKING_BUDGET_MODELS = {
     "gemini-2.5-flash-preview-05-20",
 }
 
+NO_VISION_MODELS = {"gemma-3-1b-it", "gemma-3n-e4b-it"}
+
+ATTACHMENT_TYPES = {
+    # Text
+    "text/plain",
+    "text/csv",
+    # PDF
+    "application/pdf",
+    # Images
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+    # Audio
+    "audio/wav",
+    "audio/mp3",
+    "audio/aiff",
+    "audio/aac",
+    "audio/ogg",
+    "application/ogg",
+    "audio/flac",
+    "audio/mpeg",  # Treated as audio/mp3
+    # Video
+    "video/mp4",
+    "video/mpeg",
+    "video/mov",
+    "video/avi",
+    "video/x-flv",
+    "video/mpg",
+    "video/webm",
+    "video/wmv",
+    "video/3gpp",
+    "video/quicktime",
+}
+
 
 @llm.hookimpl
 def register_models(register):
     # Register both sync and async versions of each model
-    for model_id in [
+    for model_id in (
         "gemini-pro",
         "gemini-1.5-pro-latest",
         "gemini-1.5-flash-latest",
@@ -85,8 +121,6 @@ def register_models(register):
         "gemini-2.0-pro-exp-02-05",
         # Released 25th Feb 2025:
         "gemini-2.0-flash-lite",
-        # Released 12th March 2025:
-        "gemma-3-27b-it",
         # 25th March 2025:
         "gemini-2.5-pro-exp-03-25",
         # 4th April 2025 (paid):
@@ -97,18 +131,27 @@ def register_models(register):
         "gemini-2.5-pro-preview-05-06",
         # 20th May 2025:
         "gemini-2.5-flash-preview-05-20",
-    ]:
+        # Gemma 3 models:
+        "gemma-3-1b-it",
+        "gemma-3-4b-it",
+        "gemma-3-12b-it",  # 12th March 2025
+        "gemma-3-27b-it",
+        "gemma-3n-e4b-it",  # 20th May 2025
+    ):
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         can_thinking_budget = model_id in THINKING_BUDGET_MODELS
+        can_vision = model_id not in NO_VISION_MODELS
         register(
             GeminiPro(
                 model_id,
+                can_vision=can_vision,
                 can_google_search=can_google_search,
                 can_thinking_budget=can_thinking_budget,
                 can_schema="flash-thinking" not in model_id,
             ),
             AsyncGeminiPro(
                 model_id,
+                can_vision=can_vision,
                 can_google_search=can_google_search,
                 can_thinking_budget=can_thinking_budget,
                 can_schema="flash-thinking" not in model_id,
@@ -154,39 +197,7 @@ class _SharedGemini:
     supports_schema = True
     supports_tools = True
 
-    attachment_types = (
-        # Text
-        "text/plain",
-        "text/csv",
-        # PDF
-        "application/pdf",
-        # Images
-        "image/png",
-        "image/jpeg",
-        "image/webp",
-        "image/heic",
-        "image/heif",
-        # Audio
-        "audio/wav",
-        "audio/mp3",
-        "audio/aiff",
-        "audio/aac",
-        "audio/ogg",
-        "application/ogg",
-        "audio/flac",
-        "audio/mpeg",  # Treated as audio/mp3
-        # Video
-        "video/mp4",
-        "video/mpeg",
-        "video/mov",
-        "video/avi",
-        "video/x-flv",
-        "video/mpg",
-        "video/webm",
-        "video/wmv",
-        "video/3gpp",
-        "video/quicktime",
-    )
+    attachment_types = set()
 
     class Options(llm.Options):
         code_execution: Optional[bool] = Field(
@@ -248,6 +259,7 @@ class _SharedGemini:
     def __init__(
         self,
         model_id,
+        can_vision=True,
         can_google_search=False,
         can_thinking_budget=False,
         can_schema=False,
@@ -260,6 +272,8 @@ class _SharedGemini:
         self.can_thinking_budget = can_thinking_budget
         if can_thinking_budget:
             self.Options = self.OptionsWithThinkingBudget
+        if can_vision:
+            self.attachment_types = ATTACHMENT_TYPES
 
     def build_messages(self, prompt, conversation):
         messages = []
