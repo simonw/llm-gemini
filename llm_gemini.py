@@ -114,6 +114,12 @@ def register_models(register):
         "gemini-exp-1206",
         "gemini-2.0-flash-exp",
         "learnlm-1.5-pro-experimental",
+        # Gemma 3 models:
+        "gemma-3-1b-it",
+        "gemma-3-4b-it",
+        "gemma-3-12b-it",  # 12th March 2025
+        "gemma-3-27b-it",
+        "gemma-3n-e4b-it",  # 20th May 2025
         "gemini-2.0-flash-thinking-exp-1219",
         "gemini-2.0-flash-thinking-exp-01-21",
         # Released 5th Feb 2025:
@@ -131,12 +137,6 @@ def register_models(register):
         "gemini-2.5-pro-preview-05-06",
         # 20th May 2025:
         "gemini-2.5-flash-preview-05-20",
-        # Gemma 3 models:
-        "gemma-3-1b-it",
-        "gemma-3-4b-it",
-        "gemma-3-12b-it",  # 12th March 2025
-        "gemma-3-27b-it",
-        "gemma-3n-e4b-it",  # 20th May 2025
     ):
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         can_thinking_budget = model_id in THINKING_BUDGET_MODELS
@@ -157,6 +157,7 @@ def register_models(register):
                 can_thinking_budget=can_thinking_budget,
                 can_schema=can_schema,
             ),
+            aliases=(model_id,),
         )
 
 
@@ -265,7 +266,8 @@ class _SharedGemini:
         can_thinking_budget=False,
         can_schema=False,
     ):
-        self.model_id = model_id
+        self.model_id = "gemini/{}".format(model_id)
+        self.model_name = model_id
         self.can_google_search = can_google_search
         self.supports_schema = can_schema
         if can_google_search:
@@ -472,7 +474,7 @@ class _SharedGemini:
 
 class GeminiPro(_SharedGemini, llm.KeyModel):
     def execute(self, prompt, stream, response, conversation, key):
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_id}:streamGenerateContent"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:streamGenerateContent"
         gathered = []
         body = self.build_request_body(prompt, conversation)
 
@@ -505,7 +507,7 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
 
 class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
     async def execute(self, prompt, stream, response, conversation, key):
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_id}:streamGenerateContent"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:streamGenerateContent"
         gathered = []
         body = self.build_request_body(prompt, conversation)
 

@@ -41,26 +41,71 @@ llm models default gemini-2.0-flash
 llm "A joke about a pelican and a walrus"
 ```
 
-Other models are:
+## Available models
 
-- `gemini-2.5-pro-preview-05-06` - latest paid Gemini 2.5 Pro preview
-- `gemini-2.5-flash-preview-05-20` - Gemini 2.5 Flash preview
-- `gemini-2.5-flash-preview-04-17` - Earlier Gemini 2.5 Flash preview
-- `gemini-2.5-pro-exp-03-25` - free experimental release of Gemini 2.5 Pro
-- `gemini-2.5-pro-preview-03-25` - paid preview of Gemini 2.5 Pro
-- `gemma-3-27b-it` - [Gemma 3](https://blog.google/technology/developers/gemma-3/) 27B
-- `gemini-2.0-pro-exp-02-05` - experimental release of Gemini 2.0 Pro
-- `gemini-2.0-flash-lite` - Gemini 2.0 Flash-Lite
-- `gemini-2.0-flash` - Gemini 2.0 Flash
-- `gemini-2.0-flash-thinking-exp-01-21` - experimental "thinking" model from January 2025
-- `gemini-2.0-flash-thinking-exp-1219` - experimental "thinking" model from December 2024
-- `learnlm-1.5-pro-experimental` - "an experimental task-specific model that has been trained to align with learning science principles" - [more details here](https://ai.google.dev/gemini-api/docs/learnlm).
-- `gemini-2.0-flash-exp` - [Gemini 2.0 Flash](https://blog.google/technology/google-deepmind/google-gemini-ai-update-december-2024/#gemini-2-0-flash)
-- `gemini-exp-1206` - recent experimental #3
-- `gemini-exp-1121` - recent experimental #2
-- `gemini-exp-1114` - recent experimental #1
-- `gemini-1.5-flash-8b-latest` - the least expensive
-- `gemini-1.5-flash-latest`
+<!-- [[[cog
+import cog
+from llm import cli
+from click.testing import CliRunner
+runner = CliRunner()
+result = runner.invoke(cli.cli, ["models", "-q", "gemini/"])
+lines = reversed(result.output.strip().split("\n"))
+to_output = []
+NOTES = {
+    "gemini/gemini-2.5-pro-preview-05-06": "Latest paid Gemini 2.5 Pro preview",
+    "gemini/gemini-2.5-flash-preview-05-20": "Gemini 2.5 Flash preview",
+    "gemini/gemini-2.5-flash-preview-04-17": "Earlier Gemini 2.5 Flash preview",
+    "gemini/gemini-2.5-pro-exp-03-25": "Free experimental release of Gemini 2.5 Pro",
+    "gemini/gemini-2.0-flash-thinking-exp-01-21": "Experimental \"thinking\" model from January 2025",
+    "gemini/gemini-1.5-flash-8b-latest": "The least expensive model",
+}
+for line in lines:
+    model_id, rest = line.split(None, 2)[1:]
+    note = NOTES.get(model_id, "")
+    to_output.append(
+        "- `{}`{}".format(
+            model_id,
+            ': {}'.format(note) if note else ""
+        )
+    )
+cog.out("\n".join(to_output))
+]]] -->
+- `gemini/gemini-2.5-flash-preview-05-20`: Gemini 2.5 Flash preview
+- `gemini/gemini-2.5-pro-preview-05-06`: Latest paid Gemini 2.5 Pro preview
+- `gemini/gemini-2.5-flash-preview-04-17`: Earlier Gemini 2.5 Flash preview
+- `gemini/gemini-2.5-pro-preview-03-25`
+- `gemini/gemini-2.5-pro-exp-03-25`: Free experimental release of Gemini 2.5 Pro
+- `gemini/gemini-2.0-flash-lite`
+- `gemini/gemini-2.0-pro-exp-02-05`
+- `gemini/gemini-2.0-flash`
+- `gemini/gemini-2.0-flash-thinking-exp-01-21`: Experimental "thinking" model from January 2025
+- `gemini/gemini-2.0-flash-thinking-exp-1219`
+- `gemini/gemma-3n-e4b-it`
+- `gemini/gemma-3-27b-it`
+- `gemini/gemma-3-12b-it`
+- `gemini/gemma-3-4b-it`
+- `gemini/gemma-3-1b-it`
+- `gemini/learnlm-1.5-pro-experimental`
+- `gemini/gemini-2.0-flash-exp`
+- `gemini/gemini-exp-1206`
+- `gemini/gemini-exp-1121`
+- `gemini/gemini-exp-1114`
+- `gemini/gemini-1.5-flash-8b-001`
+- `gemini/gemini-1.5-flash-8b-latest`: The least expensive model
+- `gemini/gemini-1.5-flash-002`
+- `gemini/gemini-1.5-pro-002`
+- `gemini/gemini-1.5-flash-001`
+- `gemini/gemini-1.5-pro-001`
+- `gemini/gemini-1.5-flash-latest`
+- `gemini/gemini-1.5-pro-latest`
+- `gemini/gemini-pro`
+<!-- [[[end]]] -->
+
+All of these models have aliases that omit the `gemini/` prefix, for example:
+
+```bash
+llm -m gemini-1.5-flash-8b-latest --schema 'name,age int,bio' 'invent a dog'
+```
 
 ### Images, audio and video
 
