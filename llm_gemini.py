@@ -141,20 +141,21 @@ def register_models(register):
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         can_thinking_budget = model_id in THINKING_BUDGET_MODELS
         can_vision = model_id not in NO_VISION_MODELS
+        can_schema = "flash-thinking" not in model_id and "gemma-3" not in model_id
         register(
             GeminiPro(
                 model_id,
                 can_vision=can_vision,
                 can_google_search=can_google_search,
                 can_thinking_budget=can_thinking_budget,
-                can_schema="flash-thinking" not in model_id,
+                can_schema=can_schema,
             ),
             AsyncGeminiPro(
                 model_id,
                 can_vision=can_vision,
                 can_google_search=can_google_search,
                 can_thinking_budget=can_thinking_budget,
-                can_schema="flash-thinking" not in model_id,
+                can_schema=can_schema
             ),
         )
 
