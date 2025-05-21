@@ -55,7 +55,12 @@ GOOGLE_SEARCH_MODELS_USING_SEARCH_RETRIEVAL = {
 }
 
 THINKING_BUDGET_MODELS = {
+    "gemini-2.0-flash-thinking-exp-01-21",
+    "gemini-2.0-flash-thinking-exp-1219",
     "gemini-2.5-flash-preview-04-17",
+    "gemini-2.5-pro-exp-03-25",
+    "gemini-2.5-pro-preview-03-25",
+    "gemini-2.5-pro-preview-05-06",
     "gemini-2.5-flash-preview-05-20",
 }
 
