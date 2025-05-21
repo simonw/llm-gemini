@@ -178,6 +178,31 @@ To chat interactively with the model, run `llm chat`:
 llm chat -m gemini-2.0-flash
 ```
 
+### Timeouts
+
+By default there is no `timeout` against the Gemini API. You can use the `timeout` option to protect against API requests that hang indefinitely.
+
+With the CLI tool that looks like this, to set a 1.5 second timeout:
+
+```bash
+llm -m gemini-2.5-flash-preview-05-20 'epic saga about mice' -o timeout 1.5
+```
+In the Python library timeouts are used like this:
+```python
+import httpx, llm
+
+model = llm.get_model("gemini/gemini-2.5-flash-preview-05-20")
+
+try:
+    response = model.prompt(
+        "epic saga about mice", timeout=1.5
+    )
+    print(response.text())
+except httpx.TimeoutException:
+    print("Timeout exceeded")
+```
+An `httpx.TimeoutException` subclass will be raised if the timeout is exceeded.
+
 ## Embeddings
 
 The plugin also adds support for the `gemini-embedding-exp-03-07` and `text-embedding-004` embedding models.

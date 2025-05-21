@@ -245,7 +245,7 @@ class _SharedGemini:
             description="Output a valid JSON object {...}",
             default=None,
         )
-        timeout: Optional[int] = Field(
+        timeout: Optional[float] = Field(
             description=(
                 "The maximum time in seconds to wait for a response. "
                 "If the model does not respond within this time, "
