@@ -25,4 +25,4 @@ jobs:
     - name: Run tests
       run: |
         pytest
-
+        python -m cogapp --check README.md

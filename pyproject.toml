@@ -1,15 +1,13 @@
 [project]
 name = "llm-gemini"
-version = "0.19.1"
+version = "0.20a2"
 description = "LLM plugin to access Google's Gemini family of models"
 readme = "README.md"
 authors = [{name = "Simon Willison"}]
-license = {text = "Apache-2.0"}
-classifiers = [
-    "License :: OSI Approved :: Apache Software License"
-]
+license = "Apache-2.0"
+classifiers = []
 dependencies = [
-    "llm>=0.23",
+    "llm>=0.26a0",
     "httpx",
     "ijson"
 ]
@@ -24,7 +22,7 @@ CI = "https://github.com/simonw/llm-gemini/actions"
 gemini = "llm_gemini"
 
 [project.optional-dependencies]
-test = ["pytest", "pytest-recording", "pytest-asyncio", "nest-asyncio"]
+test = ["pytest", "pytest-recording", "pytest-asyncio", "nest-asyncio", "cogapp"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "strict"

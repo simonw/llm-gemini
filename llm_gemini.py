@@ -40,6 +40,7 @@ GOOGLE_SEARCH_MODELS = {
     "gemini-2.5-pro-exp-03-25",
     "gemini-2.5-flash-preview-04-17",
     "gemini-2.5-pro-preview-05-06",
+    "gemini-2.5-flash-preview-05-20",
 }
 
 # Older Google models used google_search_retrieval instead of google_search
@@ -60,13 +61,50 @@ THINKING_BUDGET_MODELS = {
     "gemini-2.5-pro-exp-03-25",
     "gemini-2.5-pro-preview-03-25",
     "gemini-2.5-pro-preview-05-06",
+    "gemini-2.5-flash-preview-05-20",
+}
+
+NO_VISION_MODELS = {"gemma-3-1b-it", "gemma-3n-e4b-it"}
+
+ATTACHMENT_TYPES = {
+    # Text
+    "text/plain",
+    "text/csv",
+    # PDF
+    "application/pdf",
+    # Images
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+    # Audio
+    "audio/wav",
+    "audio/mp3",
+    "audio/aiff",
+    "audio/aac",
+    "audio/ogg",
+    "application/ogg",
+    "audio/flac",
+    "audio/mpeg",  # Treated as audio/mp3
+    # Video
+    "video/mp4",
+    "video/mpeg",
+    "video/mov",
+    "video/avi",
+    "video/x-flv",
+    "video/mpg",
+    "video/webm",
+    "video/wmv",
+    "video/3gpp",
+    "video/quicktime",
 }
 
 
 @llm.hookimpl
 def register_models(register):
     # Register both sync and async versions of each model
-    for model_id in [
+    for model_id in (
         "gemini-pro",
         "gemini-1.5-pro-latest",
         "gemini-1.5-flash-latest",
@@ -81,6 +119,12 @@ def register_models(register):
         "gemini-exp-1206",
         "gemini-2.0-flash-exp",
         "learnlm-1.5-pro-experimental",
+        # Gemma 3 models:
+        "gemma-3-1b-it",
+        "gemma-3-4b-it",
+        "gemma-3-12b-it",  # 12th March 2025
+        "gemma-3-27b-it",
+        "gemma-3n-e4b-it",  # 20th May 2025
         "gemini-2.0-flash-thinking-exp-1219",
         "gemini-2.0-flash-thinking-exp-01-21",
         # Released 5th Feb 2025:
@@ -88,8 +132,6 @@ def register_models(register):
         "gemini-2.0-pro-exp-02-05",
         # Released 25th Feb 2025:
         "gemini-2.0-flash-lite",
-        # Released 12th March 2025:
-        "gemma-3-27b-it",
         # 25th March 2025:
         "gemini-2.5-pro-exp-03-25",
         # 4th April 2025 (paid):
@@ -98,22 +140,29 @@ def register_models(register):
         "gemini-2.5-flash-preview-04-17",
         # 6th May 2025:
         "gemini-2.5-pro-preview-05-06",
-    ]:
+        # 20th May 2025:
+        "gemini-2.5-flash-preview-05-20",
+    ):
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         can_thinking_budget = model_id in THINKING_BUDGET_MODELS
+        can_vision = model_id not in NO_VISION_MODELS
+        can_schema = "flash-thinking" not in model_id and "gemma-3" not in model_id
         register(
             GeminiPro(
                 model_id,
+                can_vision=can_vision,
                 can_google_search=can_google_search,
                 can_thinking_budget=can_thinking_budget,
-                can_schema="flash-thinking" not in model_id,
+                can_schema=can_schema,
             ),
             AsyncGeminiPro(
                 model_id,
+                can_vision=can_vision,
                 can_google_search=can_google_search,
                 can_thinking_budget=can_thinking_budget,
-                can_schema="flash-thinking" not in model_id,
+                can_schema=can_schema,
             ),
+            aliases=(model_id,),
         )
 
 
@@ -153,40 +202,9 @@ class _SharedGemini:
     key_env_var = "LLM_GEMINI_KEY"
     can_stream = True
     supports_schema = True
+    supports_tools = True
 
-    attachment_types = (
-        # Text
-        "text/plain",
-        "text/csv",
-        # PDF
-        "application/pdf",
-        # Images
-        "image/png",
-        "image/jpeg",
-        "image/webp",
-        "image/heic",
-        "image/heif",
-        # Audio
-        "audio/wav",
-        "audio/mp3",
-        "audio/aiff",
-        "audio/aac",
-        "audio/ogg",
-        "application/ogg",
-        "audio/flac",
-        "audio/mpeg",  # Treated as audio/mp3
-        # Video
-        "video/mp4",
-        "video/mpeg",
-        "video/mov",
-        "video/avi",
-        "video/x-flv",
-        "video/mpg",
-        "video/webm",
-        "video/wmv",
-        "video/3gpp",
-        "video/quicktime",
-    )
+    attachment_types = set()
 
     class Options(llm.Options):
         code_execution: Optional[bool] = Field(
@@ -232,6 +250,14 @@ class _SharedGemini:
             description="Output a valid JSON object {...}",
             default=None,
         )
+        timeout: Optional[float] = Field(
+            description=(
+                "The maximum time in seconds to wait for a response. "
+                "If the model does not respond within this time, "
+                "the request will be aborted."
+            ),
+            default=None,
+        )
 
     class OptionsWithGoogleSearch(Options):
         google_search: Optional[bool] = Field(
@@ -247,12 +273,14 @@ class _SharedGemini:
 
     def __init__(
         self,
-        model_id,
+        gemini_model_id,
+        can_vision=True,
         can_google_search=False,
         can_thinking_budget=False,
         can_schema=False,
     ):
-        self.model_id = model_id
+        self.model_id = "gemini/{}".format(gemini_model_id)
+        self.gemini_model_id = gemini_model_id
         self.can_google_search = can_google_search
         self.supports_schema = can_schema
         if can_google_search:
@@ -260,6 +288,8 @@ class _SharedGemini:
         self.can_thinking_budget = can_thinking_budget
         if can_thinking_budget:
             self.Options = self.OptionsWithThinkingBudget
+        if can_vision:
+            self.attachment_types = ATTACHMENT_TYPES
 
     def build_messages(self, prompt, conversation):
         messages = []
@@ -278,14 +308,57 @@ class _SharedGemini:
                     )
                 if response.prompt.prompt:
                     parts.append({"text": response.prompt.prompt})
+                if response.prompt.tool_results:
+                    parts.extend(
+                        [
+                            {
+                                "function_response": {
+                                    "name": tool_result.name,
+                                    "response": {
+                                        "output": tool_result.output,
+                                    },
+                                }
+                            }
+                            for tool_result in response.prompt.tool_results
+                        ]
+                    )
                 messages.append({"role": "user", "parts": parts})
-                messages.append(
-                    {"role": "model", "parts": [{"text": response.text_or_raise()}]}
-                )
+                model_parts = []
+                response_text = response.text_or_raise()
+                if response_text:
+                    model_parts.append({"text": response_text})
+                tool_calls = response.tool_calls_or_raise()
+                if tool_calls:
+                    model_parts.extend(
+                        [
+                            {
+                                "function_call": {
+                                    "name": tool_call.name,
+                                    "args": tool_call.arguments,
+                                }
+                            }
+                            for tool_call in tool_calls
+                        ]
+                    )
+                messages.append({"role": "model", "parts": model_parts})
 
         parts = []
         if prompt.prompt:
             parts.append({"text": prompt.prompt})
+        if prompt.tool_results:
+            parts.extend(
+                [
+                    {
+                        "function_response": {
+                            "name": tool_result.name,
+                            "response": {
+                                "output": tool_result.output,
+                            },
+                        }
+                    }
+                    for tool_result in prompt.tool_results
+                ]
+            )
         for attachment in prompt.attachments:
             mime_type = resolve_type(attachment)
             parts.append(
@@ -305,17 +378,34 @@ class _SharedGemini:
             "contents": self.build_messages(prompt, conversation),
             "safetySettings": SAFETY_SETTINGS,
         }
+        if prompt.system:
+            body["systemInstruction"] = {"parts": [{"text": prompt.system}]}
+
+        tools = []
         if prompt.options and prompt.options.code_execution:
-            body["tools"] = [{"codeExecution": {}}]
+            tools.append({"codeExecution": {}})
         if prompt.options and self.can_google_search and prompt.options.google_search:
             tool_name = (
                 "google_search_retrieval"
                 if self.model_id in GOOGLE_SEARCH_MODELS_USING_SEARCH_RETRIEVAL
                 else "google_search"
             )
-            body["tools"] = [{tool_name: {}}]
-        if prompt.system:
-            body["systemInstruction"] = {"parts": [{"text": prompt.system}]}
+            tools.append({tool_name: {}})
+        if prompt.tools:
+            tools.append(
+                {
+                    "functionDeclarations": [
+                        {
+                            "name": tool.name,
+                            "description": tool.description,
+                            "parameters": tool.input_schema,
+                        }
+                        for tool in prompt.tools
+                    ]
+                }
+            )
+        if tools:
+            body["tools"] = tools
 
         generation_config = {}
 
@@ -326,6 +416,7 @@ class _SharedGemini:
                     "response_schema": cleanup_schema(copy.deepcopy(prompt.schema)),
                 }
             )
+
         if self.can_thinking_budget and prompt.options.thinking_budget is not None:
             generation_config["thinking_config"] = {
                 "thinking_budget": prompt.options.thinking_budget
@@ -353,7 +444,14 @@ class _SharedGemini:
 
         return body
 
-    def process_part(self, part):
+    def process_part(self, part, response):
+        if "functionCall" in part:
+            response.add_tool_call(
+                llm.ToolCall(
+                    name=part["functionCall"]["name"],
+                    arguments=part["functionCall"]["args"],
+                )
+            )
         if "text" in part:
             return part["text"]
         elif "executableCode" in part:
@@ -362,10 +460,10 @@ class _SharedGemini:
             return f'```\n{part["codeExecutionResult"]["output"].strip()}\n```\n'
         return ""
 
-    def process_candidates(self, candidates):
+    def process_candidates(self, candidates, response):
         # We only use the first candidate
         for part in candidates[0]["content"]["parts"]:
-            yield self.process_part(part)
+            yield self.process_part(part, response)
 
     def set_usage(self, response):
         try:
@@ -389,14 +487,14 @@ class _SharedGemini:
 
 class GeminiPro(_SharedGemini, llm.KeyModel):
     def execute(self, prompt, stream, response, conversation, key):
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_id}:streamGenerateContent"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model_id}:streamGenerateContent"
         gathered = []
         body = self.build_request_body(prompt, conversation)
 
         with httpx.stream(
             "POST",
             url,
-            timeout=None,
+            timeout=prompt.options.timeout,
             headers={"x-goog-api-key": self.get_key(key)},
             json=body,
         ) as http_response:
@@ -409,7 +507,9 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
                         if isinstance(event, dict) and "error" in event:
                             raise llm.ModelError(event["error"]["message"])
                         try:
-                            yield from self.process_candidates(event["candidates"])
+                            yield from self.process_candidates(
+                                event["candidates"], response
+                            )
                         except KeyError:
                             yield ""
                         gathered.append(event)
@@ -420,7 +520,7 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
 
 class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
     async def execute(self, prompt, stream, response, conversation, key):
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_id}:streamGenerateContent"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model_id}:streamGenerateContent"
         gathered = []
         body = self.build_request_body(prompt, conversation)
 
@@ -428,7 +528,7 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
             async with client.stream(
                 "POST",
                 url,
-                timeout=None,
+                timeout=prompt.options.timeout,
                 headers={"x-goog-api-key": self.get_key(key)},
                 json=body,
             ) as http_response:
@@ -442,7 +542,7 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                                 raise llm.ModelError(event["error"]["message"])
                             try:
                                 for chunk in self.process_candidates(
-                                    event["candidates"]
+                                    event["candidates"], response
                                 ):
                                     yield chunk
                             except KeyError:
@@ -518,8 +618,20 @@ def register_commands(cli):
 
     @gemini.command()
     @click.option("--key", help="API key to use")
-    def models(key):
-        "List of Gemini models pulled from their API"
+    @click.option(
+        "methods",
+        "--method",
+        multiple=True,
+        help="Filter by supported generation methods",
+    )
+    def models(key, methods):
+        """
+        List of Gemini models pulled from their API
+
+        Use --method to filter by supported generation methods for example:
+
+        llm gemini models --method generateContent --method embedContent
+        """
         key = llm.get_key(key, "gemini", "LLM_GEMINI_KEY")
         if not key:
             raise click.ClickException(
@@ -528,7 +640,16 @@ def register_commands(cli):
         url = f"https://generativelanguage.googleapis.com/v1beta/models"
         response = httpx.get(url, headers={"x-goog-api-key": key})
         response.raise_for_status()
-        click.echo(json.dumps(response.json()["models"], indent=2))
+        models = response.json()["models"]
+        if methods:
+            models = [
+                model
+                for model in models
+                if any(
+                    method in model["supportedGenerationMethods"] for method in methods
+                )
+            ]
+        click.echo(json.dumps(models, indent=2))
 
     @gemini.command()
     @click.option("--key", help="API key to use")
