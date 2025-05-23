@@ -64,6 +64,13 @@ THINKING_BUDGET_MODELS = {
     "gemini-2.5-flash-preview-05-20",
 }
 
+URL_CONTEXT_MODELS = {
+    "gemini-2.5-pro-preview-05-06",
+    "gemini-2.5-flash-preview-05-20",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-live-001",
+}
+
 NO_VISION_MODELS = {"gemma-3-1b-it", "gemma-3n-e4b-it"}
 
 ATTACHMENT_TYPES = {
@@ -129,6 +136,7 @@ def register_models(register):
         "gemini-2.0-flash-thinking-exp-01-21",
         # Released 5th Feb 2025:
         "gemini-2.0-flash",
+        "gemini-2.0-flash-live-001",
         "gemini-2.0-pro-exp-02-05",
         # Released 25th Feb 2025:
         "gemini-2.0-flash-lite",
@@ -145,6 +153,7 @@ def register_models(register):
     ):
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         can_thinking_budget = model_id in THINKING_BUDGET_MODELS
+        can_url_context = model_id in URL_CONTEXT_MODELS
         can_vision = model_id not in NO_VISION_MODELS
         can_schema = "flash-thinking" not in model_id and "gemma-3" not in model_id
         register(
@@ -154,6 +163,7 @@ def register_models(register):
                 can_google_search=can_google_search,
                 can_thinking_budget=can_thinking_budget,
                 can_schema=can_schema,
+                can_url_context=can_url_context,
             ),
             AsyncGeminiPro(
                 model_id,
@@ -161,6 +171,7 @@ def register_models(register):
                 can_google_search=can_google_search,
                 can_thinking_budget=can_thinking_budget,
                 can_schema=can_schema,
+                can_url_context=can_url_context,
             ),
             aliases=(model_id,),
         )
@@ -265,7 +276,19 @@ class _SharedGemini:
             default=None,
         )
 
-    class OptionsWithThinkingBudget(OptionsWithGoogleSearch):
+    class OptionsWithUrlContext(Options):
+        url_context: Optional[bool] = Field(
+            description="Enables the model to retrieve and analyze content from specified URLs",
+            default=None,
+        )
+
+    class OptionsWithGoogleSearchAndUrlContext(OptionsWithGoogleSearch):
+        url_context: Optional[bool] = Field(
+            description="Enables the model to retrieve and analyze content from specified URLs",
+            default=None,
+        )
+
+    class OptionsWithThinkingBudget(OptionsWithGoogleSearchAndUrlContext):
         thinking_budget: Optional[int] = Field(
             description="Indicates the thinking budget in tokens. Set to 0 to disable.",
             default=None,
@@ -278,16 +301,26 @@ class _SharedGemini:
         can_google_search=False,
         can_thinking_budget=False,
         can_schema=False,
+        can_url_context=False,
     ):
         self.model_id = "gemini/{}".format(gemini_model_id)
         self.gemini_model_id = gemini_model_id
         self.can_google_search = can_google_search
+        self.can_url_context = can_url_context
         self.supports_schema = can_schema
-        if can_google_search:
-            self.Options = self.OptionsWithGoogleSearch
-        self.can_thinking_budget = can_thinking_budget
+        
+        # Set Options class based on capabilities - hierarchical assignment
+        # to ensure models with multiple features get the correct combined Options class
         if can_thinking_budget:
             self.Options = self.OptionsWithThinkingBudget
+        elif can_google_search and can_url_context:
+            self.Options = self.OptionsWithGoogleSearchAndUrlContext
+        elif can_url_context:
+            self.Options = self.OptionsWithUrlContext
+        elif can_google_search:
+            self.Options = self.OptionsWithGoogleSearch
+            
+        self.can_thinking_budget = can_thinking_budget
         if can_vision:
             self.attachment_types = ATTACHMENT_TYPES
 
@@ -391,6 +424,8 @@ class _SharedGemini:
                 else "google_search"
             )
             tools.append({tool_name: {}})
+        if prompt.options and self.can_url_context and prompt.options.url_context:
+            tools.append({"url_context": {}})
         if prompt.tools:
             tools.append(
                 {
