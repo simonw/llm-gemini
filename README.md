@@ -170,6 +170,36 @@ llm -m gemini-2.0-flash -o google_search 1 \
 
 Use `llm logs -c --json` after running a prompt to see the full JSON response, which includes [additional information](https://github.com/simonw/llm-gemini/pull/29#issuecomment-2606201877) about grounded results.
 
+### URL Context
+
+Some Gemini 2.0+ models support URL Context, which allows the model to retrieve and analyze content from specified URLs as part of their response.
+
+This feature is currently experimental and supports up to 20 URLs with a daily quota limit of 1500 via the API.
+
+Supported models:
+- `gemini-2.5-pro-preview-05-06`
+- `gemini-2.5-flash-preview-05-20`
+- `gemini-2.0-flash`
+- `gemini-2.0-flash-live-001`
+
+To enable URL context, use `-o url_context 1` and provide URLs as attachments:
+
+```bash
+llm -m gemini-2.0-flash -o url_context 1 \
+  'Compare these articles' \
+  -a https://example.com/article1 \
+  -a https://example.com/article2
+```
+
+You can also combine URL context with Google search:
+
+```bash
+llm -m gemini-2.5-pro-preview-05-06 \
+  -o url_context 1 -o google_search 1 \
+  'Find recent news about this topic and compare with this article' \
+  -a https://example.com/article
+```
+
 ### Chat
 
 To chat interactively with the model, run `llm chat`:
