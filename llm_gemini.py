@@ -660,4 +660,7 @@ def register_commands(cli):
             f"https://generativelanguage.googleapis.com/v1beta/files?key={key}",
         )
         response.raise_for_status()
-        click.echo(json.dumps(response.json()["files"], indent=2))
+        if "files" in response.json():
+            click.echo(json.dumps(response.json()["files"], indent=2))
+        else:
+            click.echo("No files uploaded to the Gemini API.")
