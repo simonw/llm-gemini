@@ -180,8 +180,8 @@ def resolve_type(attachment):
     return mime_type
 
 
-def cleanup_schema(schema, in_properties=False):
-    "Gemini supports only a subset of JSON schema"
+def _cleanup_schema(schema, in_properties=False) -> None:
+    "Gemini supports only a subset of JSON schema. Operates in-place."
     keys_to_remove = ("$schema", "additionalProperties", "title")
 
     if isinstance(schema, dict):
@@ -192,13 +192,42 @@ def cleanup_schema(schema, in_properties=False):
         for key, value in list(schema.items()):
             # If the key is 'properties', set the flag for its value.
             if key == "properties" and isinstance(value, dict):
-                cleanup_schema(value, in_properties=True)
+                _cleanup_schema(value, in_properties=True)
             else:
-                cleanup_schema(value, in_properties=in_properties)
+                _cleanup_schema(value, in_properties=in_properties)
     elif isinstance(schema, list):
         for item in schema:
-            cleanup_schema(item, in_properties=in_properties)
+            _cleanup_schema(item, in_properties=in_properties)
+
+
+def cleanup_schema(schema: dict) -> dict:
+    "Remove parts of JSONshchema that Gemini does not support, and inline $defs."
+    schema = replace_refs(schema)
+    # The following works in-place, so we need to copy the schema first
+    schema = copy.deepcopy(schema)
+    _cleanup_schema(schema)
     return schema
+
+
+def replace_refs(schema: dict) -> dict:
+    """inline $defs as Gemini does not support them. Requires the jsonref package."""
+    if "$defs" not in schema:
+        return schema
+    try:
+        import jsonref
+    except ImportError as e:
+        raise ImportError(
+            "The 'jsonref' (https://pypi.org/project/jsonref/) "
+            "package is required to use Gemini with schemas that "
+            "contain $ref keys, eg pydantic models with `people: list[Person]`."
+            "Install jsonref with: `python -m pip install jsonref`. "
+            "See https://github.com/simonw/llm/issues/849 for more details."
+        ) from e
+    # Disable lazy loading so that we materialize the entire result,
+    # otherwise after you .pop("$defs") the result becomes un-copyable.
+    replaced = jsonref.replace_refs(schema, lazy_load=False)
+    replaced.pop("$defs")
+    return replaced
 
 
 class _SharedGemini:
@@ -417,7 +446,7 @@ class _SharedGemini:
             generation_config.update(
                 {
                     "response_mime_type": "application/json",
-                    "response_schema": cleanup_schema(copy.deepcopy(prompt.schema)),
+                    "response_schema": cleanup_schema(prompt.schema),
                 }
             )
 
@@ -459,9 +488,9 @@ class _SharedGemini:
         if "text" in part:
             return part["text"]
         elif "executableCode" in part:
-            return f'```{part["executableCode"]["language"].lower()}\n{part["executableCode"]["code"].strip()}\n```\n'
+            return f"```{part['executableCode']['language'].lower()}\n{part['executableCode']['code'].strip()}\n```\n"
         elif "codeExecutionResult" in part:
-            return f'```\n{part["codeExecutionResult"]["output"].strip()}\n```\n'
+            return f"```\n{part['codeExecutionResult']['output'].strip()}\n```\n"
         return ""
 
     def process_candidates(self, candidates, response):

@@ -215,6 +215,82 @@ def test_cleanup_schema(schema, expected):
     assert result == expected
 
 
+SCHEMA_WITH_REFS = {
+    "$defs": {
+        "Job": {
+            "properties": {
+                "Employer": {"title": "Employer", "type": "string"},
+                "Occupation": {"title": "Occupation", "type": "integer"},
+            },
+            "required": ["Employer", "Occupation"],
+            "title": "Job",
+            "type": "object",
+        }
+    },
+    "properties": {
+        "jobs": {"items": {"$ref": "#/$defs/Job"}, "title": "Jobs", "type": "array"}
+    },
+    "required": ["jobs"],
+    "title": "Jobs",
+    "type": "object",
+}
+
+
+def test_cleanup_schema_replace_refs():
+    inp = SCHEMA_WITH_REFS
+    expected = {
+        "properties": {
+            "jobs": {
+                "items": {
+                    "properties": {
+                        "Employer": {"title": "Employer", "type": "string"},
+                        "Occupation": {"title": "Occupation", "type": "integer"},
+                    },
+                    "required": ["Employer", "Occupation"],
+                    "title": "Job",
+                    "type": "object",
+                },
+                "title": "Jobs",
+                "type": "array",
+            }
+        },
+        "required": ["jobs"],
+        "type": "object",
+    }
+    result = cleanup_schema(inp)
+    assert result == expected
+
+
+def _make_package_unimportable(monkeypatch, package_name):
+    import builtins
+
+    import_orig = builtins.__import__
+
+    def mocked_import(name, *args, **kwargs):
+        if name == package_name:
+            raise ImportError()
+        return import_orig(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", mocked_import)
+
+
+def test_cleanup_schema_no_jsonref_installed(monkeypatch):
+    _make_package_unimportable(monkeypatch, "jsonref")
+
+    with pytest.raises(ImportError):
+        cleanup_schema(SCHEMA_WITH_REFS)
+
+    basic_schema = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Example Schema",
+        "additionalProperties": False,
+        "type": "object",
+    }
+    expected = {"type": "object"}
+    result = cleanup_schema(basic_schema)
+    assert result == expected
+
+
 @pytest.mark.vcr
 def test_cli_gemini_models(tmpdir, monkeypatch):
     user_dir = tmpdir / "llm.datasette.io"
