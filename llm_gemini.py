@@ -41,6 +41,7 @@ GOOGLE_SEARCH_MODELS = {
     "gemini-2.5-flash-preview-04-17",
     "gemini-2.5-pro-preview-05-06",
     "gemini-2.5-flash-preview-05-20",
+    "gemini-2.5-pro-preview-06-05",
 }
 
 # Older Google models used google_search_retrieval instead of google_search
@@ -62,6 +63,7 @@ THINKING_BUDGET_MODELS = {
     "gemini-2.5-pro-preview-03-25",
     "gemini-2.5-pro-preview-05-06",
     "gemini-2.5-flash-preview-05-20",
+    "gemini-2.5-pro-preview-06-05",
 }
 
 NO_VISION_MODELS = {"gemma-3-1b-it", "gemma-3n-e4b-it"}
@@ -142,6 +144,8 @@ def register_models(register):
         "gemini-2.5-pro-preview-05-06",
         # 20th May 2025:
         "gemini-2.5-flash-preview-05-20",
+        # 5th June 2025:
+        "gemini-2.5-pro-preview-06-05",
     ):
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         can_thinking_budget = model_id in THINKING_BUDGET_MODELS
