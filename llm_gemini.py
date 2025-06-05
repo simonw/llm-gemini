@@ -663,4 +663,4 @@ def register_commands(cli):
         if "files" in response.json():
             click.echo(json.dumps(response.json()["files"], indent=2))
         else:
-            click.echo("No files uploaded to the Gemini API.")
+            click.echo("No files uploaded to the Gemini API.", err=True)
