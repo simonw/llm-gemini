@@ -262,6 +262,13 @@ class _SharedGemini:
             ),
             default=None,
         )
+        url_context: Optional[bool] = Field(
+            description=(
+                "Enable the URL context tool so the model can fetch content "
+                "from URLs mentioned in the prompt"
+            ),
+            default=None,
+        )
 
     class OptionsWithGoogleSearch(Options):
         google_search: Optional[bool] = Field(
@@ -395,6 +402,8 @@ class _SharedGemini:
                 else "google_search"
             )
             tools.append({tool_name: {}})
+        if prompt.options and prompt.options.url_context:
+            tools.append({"url_context": {}})
         if prompt.tools:
             tools.append(
                 {
