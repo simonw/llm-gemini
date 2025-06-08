@@ -171,6 +171,17 @@ llm -m gemini-2.0-flash -o google_search 1 \
 
 Use `llm logs -c --json` after running a prompt to see the full JSON response, which includes [additional information](https://github.com/simonw/llm-gemini/pull/29#issuecomment-2606201877) about grounded results.
 
+### URL context
+
+The [URL context tool](https://ai.google.dev/gemini-api/docs/url-context) lets the model fetch content from URLs that you include in your prompt. That content is then used to inform the response.
+
+To enable this feature, use `-o url_context 1`:
+
+```bash
+llm -m gemini-2.0-flash -o url_context 1 \
+  'Summarize https://example.com'
+```
+
 ### Chat
 
 To chat interactively with the model, run `llm chat`:
