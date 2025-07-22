@@ -433,6 +433,38 @@ def test_cli_gemini_generate_with_multiple_attachments(tmpdir, monkeypatch):
     assert output_file.exists()
 
 
+@pytest.mark.vcr
+def test_cli_gemini_generate_with_stdin(tmpdir, monkeypatch):
+    """Test image generation reading prompt from stdin"""
+    user_dir = tmpdir / "llm.datasette.io"
+    user_dir.mkdir()
+    monkeypatch.setenv("LLM_USER_PATH", str(user_dir))
+    
+    output_file = tmpdir / "stdin_output.jpg"
+    
+    runner = CliRunner()
+    # Simulate stdin input using Click's input parameter
+    result = runner.invoke(cli, [
+        "gemini", "generate",
+        "--output", str(output_file),
+        "--key", GEMINI_API_KEY,
+        "--model", "gemini-2.0-flash-exp-image-generation"
+    ], input="A simple geometric pattern\n")
+    
+    assert result.exit_code == 0
+    assert f"Image saved to {output_file}" in result.output
+    assert output_file.exists()
+
+
+def test_cli_gemini_generate_no_prompt_error():
+    """Test that generate command fails when no prompt is provided"""
+    runner = CliRunner()
+    result = runner.invoke(cli, ["gemini", "generate"])
+    
+    assert result.exit_code != 0
+    assert "No prompt provided" in result.output
+
+
 def test_cli_gemini_generate_with_nonexistent_attachment(tmpdir, monkeypatch):
     """Test that generate command fails gracefully with nonexistent attachment"""
     user_dir = tmpdir / "llm.datasette.io"

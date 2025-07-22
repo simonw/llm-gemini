@@ -696,7 +696,7 @@ def register_commands(cli):
             click.echo("No files uploaded to the Gemini API.", err=True)
 
     @gemini.command()
-    @click.argument("prompt", required=True)
+    @click.argument("prompt", required=False)
     @click.option("--output", "-o", help="Output image to specified file (e.g., image.jpg)")
     @click.option("--attach", "-a", multiple=True, help="Attach image files for editing/modification (can be used multiple times)")
     @click.option("--key", help="API key to use")
@@ -708,9 +708,17 @@ def register_commands(cli):
         Example usage:
             llm gemini generate "A pelican riding a bicycle" --output image.jpg
             llm gemini generate "A sunset over mountains" > sunset.jpg
+            echo "A sunset over mountains" | llm gemini generate > sunset.jpg
             llm gemini generate "Make this image black and white" --attach photo.jpg --output bw.jpg
             llm gemini generate "Combine these images" --attach img1.jpg --attach img2.png --output combined.jpg
         """
+        # Read from stdin if no prompt provided
+        if not prompt:
+            if not sys.stdin.isatty():
+                prompt = sys.stdin.read().strip()
+            if not prompt:
+                raise click.ClickException("No prompt provided. Either pass a prompt as an argument or pipe it via stdin.")
+        
         key = llm.get_key(key, "gemini", "LLM_GEMINI_KEY")
         if not key:
             raise click.ClickException(
