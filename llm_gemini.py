@@ -162,6 +162,7 @@ def register_models(register):
         "gemini-2.5-pro-preview-06-05",
         "gemini-2.5-flash",
         "gemini-2.5-pro",
+        # 22nd July 2025:
         "gemini-2.5-flash-lite",
         # Image generation models
         "gemini-2.0-flash-exp-image-generation",
