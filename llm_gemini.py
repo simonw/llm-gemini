@@ -47,7 +47,7 @@ GOOGLE_SEARCH_MODELS = {
     "gemini-2.5-pro-preview-06-05",
     "gemini-2.5-pro",
     "gemini-2.5-flash",
-    "gemini-2.5-flash-lite-preview-06-17",
+    "gemini-2.5-flash-lite",
 }
 
 # Older Google models used google_search_retrieval instead of google_search
@@ -72,7 +72,7 @@ THINKING_BUDGET_MODELS = {
     "gemini-2.5-pro-preview-06-05",
     "gemini-2.5-pro",
     "gemini-2.5-flash",
-    "gemini-2.5-flash-lite-preview-06-17",
+    "gemini-2.5-flash-lite",
 }
 
 NO_VISION_MODELS = {"gemma-3-1b-it", "gemma-3n-e4b-it"}
@@ -160,10 +160,9 @@ def register_models(register):
         "gemini-2.5-flash-preview-05-20",
         # 5th June 2025:
         "gemini-2.5-pro-preview-06-05",
-        # 17th June 2025:
-        "gemini-2.5-flash-lite-preview-06-17",
         "gemini-2.5-flash",
         "gemini-2.5-pro",
+        "gemini-2.5-flash-lite",
         # Image generation models
         "gemini-2.0-flash-exp-image-generation",
         "gemini-2.0-flash-preview-image-generation",
@@ -355,8 +354,7 @@ class _SharedGemini:
                 messages.append({"role": "user", "parts": parts})
                 model_parts = []
                 response_text = response.text_or_raise()
-                if response_text:
-                    model_parts.append({"text": response_text})
+                model_parts.append({"text": response_text})
                 tool_calls = response.tool_calls_or_raise()
                 if tool_calls:
                     model_parts.extend(

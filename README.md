@@ -54,7 +54,7 @@ to_output = []
 NOTES = {
     "gemini/gemini-2.5-pro": "Gemini 2.5 Pro",
     "gemini/gemini-2.5-flash": "Gemini 2.5 Flash",
-    "gemini/gemini-2.5-flash-lite-preview-06-17": "Gemini 2.5 Lite Preview",
+    "gemini/gemini-2.5-flash-lite": "Gemini 2.5 Flash Lite",
     "gemini/gemini-2.5-flash-preview-05-20": "Gemini 2.5 Flash preview (priced differently from 2.5 Flash)",
     "gemini/gemini-2.0-flash-thinking-exp-01-21": "Experimental \"thinking\" model from January 2025",
     "gemini/gemini-1.5-flash-8b-latest": "The least expensive model",
@@ -70,9 +70,9 @@ for line in lines:
     )
 cog.out("\n".join(to_output))
 ]]] -->
+- `gemini/gemini-2.5-flash-lite`: Gemini 2.5 Flash Lite
 - `gemini/gemini-2.5-pro`: Gemini 2.5 Pro
 - `gemini/gemini-2.5-flash`: Gemini 2.5 Flash
-- `gemini/gemini-2.5-flash-lite-preview-06-17`: Gemini 2.5 Lite Preview
 - `gemini/gemini-2.5-pro-preview-06-05`
 - `gemini/gemini-2.5-flash-preview-05-20`: Gemini 2.5 Flash preview (priced differently from 2.5 Flash)
 - `gemini/gemini-2.5-pro-preview-05-06`
