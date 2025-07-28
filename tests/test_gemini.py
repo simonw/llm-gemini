@@ -264,3 +264,164 @@ def test_tools():
     assert second.tool_calls()[0].name == "pelican_name_generator"
     assert second.prompt.tool_results[0].output == "Charles"
     assert third.prompt.tool_results[0].output == "Sammy"
+
+
+def test_url_context_model_capabilities():
+    """Test that URL context models have the correct capabilities"""
+    # Test URL context capable models
+    url_context_models = [
+        "gemini-2.5-pro-preview-05-06",
+        "gemini-2.5-flash-preview-05-20", 
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-live-001",
+    ]
+    
+    for model_id in url_context_models:
+        model = llm.get_model(f"gemini/{model_id}")
+        assert hasattr(model, 'can_url_context')
+        assert model.can_url_context == True
+        
+        # Check that options include url_context
+        options_class = model.Options
+        fields = {field.alias or name for name, field in options_class.model_fields.items()}
+        assert 'url_context' in fields
+        
+    # Test models that should not have URL context
+    non_url_context_models = ["gemini-pro", "gemma-3-1b-it"]
+    for model_id in non_url_context_models:
+        model = llm.get_model(f"gemini/{model_id}")
+        assert hasattr(model, 'can_url_context')
+        assert model.can_url_context == False
+
+
+def test_url_context_options_inheritance():
+    """Test that Options classes are correctly inherited for different feature combinations"""
+    from llm_gemini import _SharedGemini
+    
+    # Test URL context only model
+    model_url_only = _SharedGemini(
+        "test-model", 
+        can_url_context=True,
+        can_google_search=False,
+        can_thinking_budget=False
+    )
+    assert model_url_only.Options.__name__ == "OptionsWithUrlContext"
+    
+    # Test Google search + URL context model  
+    model_combined = _SharedGemini(
+        "test-model",
+        can_url_context=True,
+        can_google_search=True,
+        can_thinking_budget=False
+    )
+    assert model_combined.Options.__name__ == "OptionsWithGoogleSearchAndUrlContext"
+    
+    # Test thinking budget model (should include all features)
+    model_thinking = _SharedGemini(
+        "test-model",
+        can_url_context=True,
+        can_google_search=True, 
+        can_thinking_budget=True
+    )
+    assert model_thinking.Options.__name__ == "OptionsWithThinkingBudget"
+    
+    # Verify the thinking budget class has all required fields
+    fields = {field.alias or name for name, field in model_thinking.Options.model_fields.items()}
+    assert 'url_context' in fields
+    assert 'google_search' in fields
+    assert 'thinking_budget' in fields
+
+
+def test_url_context_request_body_generation():
+    """Test that URL context tool is correctly added to request body"""
+    from llm_gemini import _SharedGemini
+    import llm
+    
+    # Create a model with URL context capability
+    model = _SharedGemini(
+        "gemini-2.0-flash",
+        can_url_context=True,
+        can_google_search=True
+    )
+    
+    # Test with url_context enabled
+    prompt = llm.Prompt("Test prompt")
+    prompt.options = model.Options(url_context=True)
+    
+    body = model.build_request_body(prompt, None)
+    
+    # Check that url_context tool is in the tools
+    assert 'tools' in body
+    tool_names = []
+    for tool in body['tools']:
+        tool_names.extend(tool.keys())
+    assert 'url_context' in tool_names
+    
+    # Test with url_context disabled
+    prompt.options = model.Options(url_context=False)
+    body = model.build_request_body(prompt, None)
+    
+    # url_context tool should not be present
+    if 'tools' in body:
+        tool_names = []
+        for tool in body['tools']:
+            tool_names.extend(tool.keys())
+        assert 'url_context' not in tool_names
+
+
+def test_url_context_and_google_search_combination():
+    """Test that models can use both URL context and Google search simultaneously"""
+    from llm_gemini import _SharedGemini
+    import llm
+    
+    # Create a model with both capabilities
+    model = _SharedGemini(
+        "gemini-2.5-pro-preview-05-06",
+        can_url_context=True,
+        can_google_search=True
+    )
+    
+    # Test with both features enabled
+    prompt = llm.Prompt("Test prompt")
+    prompt.options = model.Options(url_context=True, google_search=True)
+    
+    body = model.build_request_body(prompt, None)
+    
+    # Check that both tools are in the request
+    assert 'tools' in body
+    tool_names = []
+    for tool in body['tools']:
+        tool_names.extend(tool.keys())
+    assert 'url_context' in tool_names
+    assert 'google_search' in tool_names
+
+
+def test_url_context_models_constant():
+    """Test that URL_CONTEXT_MODELS constant contains the correct models"""
+    from llm_gemini import URL_CONTEXT_MODELS
+    
+    expected_models = {
+        "gemini-2.5-pro-preview-05-06",
+        "gemini-2.5-flash-preview-05-20",
+        "gemini-2.0-flash", 
+        "gemini-2.0-flash-live-001",
+    }
+    
+    assert URL_CONTEXT_MODELS == expected_models
+
+
+def test_url_context_model_registration():
+    """Test that all URL context models are properly registered"""
+    import llm
+    from llm_gemini import URL_CONTEXT_MODELS
+    
+    # Verify that all URL_CONTEXT_MODELS are available as registered models
+    for model_id in URL_CONTEXT_MODELS:
+        try:
+            model = llm.get_model(f"gemini/{model_id}")
+            assert model is not None
+            assert hasattr(model, 'can_url_context')
+            assert model.can_url_context == True
+        except Exception as e:
+            # If model isn't registered, this test will catch it
+            assert False, f"Model {model_id} from URL_CONTEXT_MODELS is not properly registered: {e}"
