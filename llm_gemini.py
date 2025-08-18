@@ -272,6 +272,13 @@ class _SharedGemini:
             ),
             default=None,
         )
+        url_context: Optional[bool] = Field(
+            description=(
+                "Enable the URL context tool so the model can fetch content "
+                "from URLs mentioned in the prompt"
+            ),
+            default=None,
+        )
 
     class OptionsWithGoogleSearch(Options):
         google_search: Optional[bool] = Field(
@@ -404,6 +411,8 @@ class _SharedGemini:
                 else "google_search"
             )
             tools.append({tool_name: {}})
+        if prompt.options and prompt.options.url_context:
+            tools.append({"url_context": {}})
         if prompt.tools:
             tools.append(
                 {
@@ -489,6 +498,12 @@ class _SharedGemini:
             candidates_token_count = usage.get("candidatesTokenCount") or 0
             thoughts_token_count = usage.get("thoughtsTokenCount") or 0
             output_tokens = candidates_token_count + thoughts_token_count
+            tool_token_count = usage.get("toolUsePromptTokenCount") or 0
+            if tool_token_count:
+                if input_tokens is None:
+                    input_tokens = tool_token_count
+                else:
+                    input_tokens += tool_token_count
             usage.pop("totalTokenCount", None)
             if input_tokens is not None:
                 response.set_usage(

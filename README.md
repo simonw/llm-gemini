@@ -174,6 +174,27 @@ llm -m gemini-2.0-flash -o google_search 1 \
 
 Use `llm logs -c --json` after running a prompt to see the full JSON response, which includes [additional information](https://github.com/simonw/llm-gemini/pull/29#issuecomment-2606201877) about grounded results.
 
+### URL context
+
+Gemini models support a [URL context](https://ai.google.dev/gemini-api/docs/url-context) tool which, when enabled, allows the models to fetch additional content from URLs as part of their execution.
+
+You can enable that with the `-o url_context 1` option - for example:
+
+```bash
+llm -m gemini-2.5-flash -o url_context 1 'Latest headline on simonwillison.net'
+```
+Extra tokens introduced by this tool will be charged as input tokens. Use `--usage` to see details of those:
+```bash
+llm -m gemini-2.5-flash -o url_context 1 --usage \
+  'Latest headline on simonwillison.net'
+```
+Outputs:
+```
+The latest headline on simonwillison.net as of August 17, 2025, is "TIL: Running a gpt-oss eval suite against LM Studio on a Mac.".
+Token usage: 9,613 input, 87 output, {"candidatesTokenCount": 57, "promptTokensDetails": [{"modality": "TEXT", "tokenCount": 10}], "toolUsePromptTokenCount": 9603, "toolUsePromptTokensDetails": [{"modality": "TEXT", "tokenCount": 9603}], "thoughtsTokenCount": 30}
+```
+The `"toolUsePromptTokenCount"` key shows how many tokens were used for that URL context.
+
 ### Chat
 
 To chat interactively with the model, run `llm chat`:
