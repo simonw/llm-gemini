@@ -1,10 +1,13 @@
+import base64
 import click
 import copy
 import httpx
 import ijson
 import json
 import llm
+import mimetypes
 from pydantic import Field
+import sys
 from typing import Optional
 
 SAFETY_SETTINGS = [
@@ -73,6 +76,11 @@ THINKING_BUDGET_MODELS = {
 }
 
 NO_VISION_MODELS = {"gemma-3-1b-it", "gemma-3n-e4b-it"}
+
+IMAGE_GENERATION_MODELS = {
+    "gemini-2.0-flash-exp-image-generation",
+    "gemini-2.0-flash-preview-image-generation",
+}
 
 ATTACHMENT_TYPES = {
     # Text
@@ -156,11 +164,15 @@ def register_models(register):
         "gemini-2.5-pro",
         # 22nd July 2025:
         "gemini-2.5-flash-lite",
+        # Image generation models
+        "gemini-2.0-flash-exp-image-generation",
+        "gemini-2.0-flash-preview-image-generation",
     ):
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         can_thinking_budget = model_id in THINKING_BUDGET_MODELS
         can_vision = model_id not in NO_VISION_MODELS
         can_schema = "flash-thinking" not in model_id and "gemma-3" not in model_id
+        can_image_generation = model_id in IMAGE_GENERATION_MODELS
         register(
             GeminiPro(
                 model_id,
@@ -168,6 +180,7 @@ def register_models(register):
                 can_google_search=can_google_search,
                 can_thinking_budget=can_thinking_budget,
                 can_schema=can_schema,
+                can_image_generation=can_image_generation,
             ),
             AsyncGeminiPro(
                 model_id,
@@ -175,6 +188,7 @@ def register_models(register):
                 can_google_search=can_google_search,
                 can_thinking_budget=can_thinking_budget,
                 can_schema=can_schema,
+                can_image_generation=can_image_generation,
             ),
             aliases=(model_id,),
         )
@@ -299,10 +313,12 @@ class _SharedGemini:
         can_google_search=False,
         can_thinking_budget=False,
         can_schema=False,
+        can_image_generation=False,
     ):
         self.model_id = "gemini/{}".format(gemini_model_id)
         self.gemini_model_id = gemini_model_id
         self.can_google_search = can_google_search
+        self.can_image_generation = can_image_generation
         self.supports_schema = can_schema
         if can_google_search:
             self.Options = self.OptionsWithGoogleSearch
@@ -692,3 +708,142 @@ def register_commands(cli):
             click.echo(json.dumps(response.json()["files"], indent=2))
         else:
             click.echo("No files uploaded to the Gemini API.", err=True)
+
+    @gemini.command()
+    @click.argument("prompt", required=False)
+    @click.option("--output", "-o", help="Output image to specified file (e.g., image.jpg)")
+    @click.option("--attach", "-a", multiple=True, help="Attach image files for editing/modification (can be used multiple times)")
+    @click.option("--key", help="API key to use")
+    @click.option("--model", default="gemini-2.0-flash-exp-image-generation", help="Model to use for image generation")
+    def generate(prompt, output, attach, key, model):
+        """
+        Generate an image from a text prompt using Gemini models
+        
+        Example usage:
+            llm gemini generate "A pelican riding a bicycle" --output image.jpg
+            llm gemini generate "A sunset over mountains" > sunset.jpg
+            echo "A sunset over mountains" | llm gemini generate > sunset.jpg
+            llm gemini generate "Make this image black and white" --attach photo.jpg --output bw.jpg
+            llm gemini generate "Combine these images" --attach img1.jpg --attach img2.png --output combined.jpg
+        """
+        # Read from stdin if no prompt provided
+        if not prompt:
+            if not sys.stdin.isatty():
+                prompt = sys.stdin.read().strip()
+            if not prompt:
+                raise click.ClickException("No prompt provided. Either pass a prompt as an argument or pipe it via stdin.")
+        
+        key = llm.get_key(key, "gemini", "LLM_GEMINI_KEY")
+        if not key:
+            raise click.ClickException(
+                "You must set the LLM_GEMINI_KEY environment variable or use --key"
+            )
+        
+        if model not in IMAGE_GENERATION_MODELS:
+            raise click.ClickException(
+                f"Model {model} does not support image generation. Use one of: {', '.join(IMAGE_GENERATION_MODELS)}"
+            )
+            
+        try:
+            # Process attachments if any
+            parts = [{"text": prompt}]
+            
+            for attachment_path in attach:
+                try:
+                    with open(attachment_path, "rb") as f:
+                        file_data = f.read()
+                    
+                    # Encode as base64
+                    encoded_data = base64.b64encode(file_data).decode('utf-8')
+                    
+                    # Determine MIME type based on file extension
+                    mime_type, _ = mimetypes.guess_type(attachment_path)
+                    
+                    # Apply fallbacks for common image types if MIME type couldn't be determined
+                    if not mime_type:
+                        if attachment_path.lower().endswith(('.jpg', '.jpeg')):
+                            mime_type = 'image/jpeg'
+                        elif attachment_path.lower().endswith('.png'):
+                            mime_type = 'image/png'
+                        elif attachment_path.lower().endswith('.webp'):
+                            mime_type = 'image/webp'
+                        else:
+                            mime_type = 'image/jpeg'  # fallback
+                    
+                    parts.append({
+                        "inlineData": {
+                            "data": encoded_data,
+                            "mimeType": mime_type
+                        }
+                    })
+                    
+                except IOError as e:
+                    raise click.ClickException(f"Failed to read attachment {attachment_path}: {e}")
+            
+            # Make request to Gemini API for image generation
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+            headers = {"x-goog-api-key": key}
+            
+            request_body = {
+                "contents": [
+                    {
+                        "role": "user",
+                        "parts": parts
+                    }
+                ],
+                "generationConfig": {
+                    "responseModalities": ["TEXT", "IMAGE"]
+                },
+            }
+            
+            response = httpx.post(url, headers=headers, json=request_body, timeout=60.0)
+            response.raise_for_status()
+            
+            response_data = response.json()
+            
+            if "error" in response_data:
+                raise click.ClickException(f"API Error: {response_data['error']['message']}")
+            
+            # Extract image data from response
+            if "candidates" not in response_data or not response_data["candidates"]:
+                raise click.ClickException("No image was generated")
+                
+            candidate = response_data["candidates"][0]
+            parts = candidate.get("content", {}).get("parts", [])
+            
+            image_data = None
+            for part in parts:
+                if "inlineData" in part:
+                    inline_data = part["inlineData"]
+                    if inline_data.get("mimeType", "").startswith("image/"):
+                        image_data = inline_data["data"]
+                        break
+            
+            if not image_data:
+                # Check if there's a text response that might explain why no image was generated
+                text_parts = [part.get("text", "") for part in parts if "text" in part]
+                if text_parts:
+                    text_response = " ".join(text_parts).strip()
+                    raise click.ClickException(f"No image data found in response. Model response: {text_response}")
+                else:
+                    raise click.ClickException("No image data found in response")
+            
+            # Decode base64 image data
+            try:
+                decoded_data = base64.b64decode(image_data)
+            except Exception as e:
+                raise click.ClickException(f"Failed to decode image data: {e}")
+            
+            # Output the image
+            if output:
+                with open(output, "wb") as f:
+                    f.write(decoded_data)
+                click.echo(f"Image saved to {output}", err=True)
+            else:
+                # Output to stdout for piping
+                sys.stdout.buffer.write(decoded_data)
+                
+        except httpx.RequestError as e:
+            raise click.ClickException(f"Network error: {e}")
+        except httpx.HTTPStatusError as e:
+            raise click.ClickException(f"HTTP error {e.response.status_code}: {e.response.text}")
