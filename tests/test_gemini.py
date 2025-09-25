@@ -243,6 +243,14 @@ def test_cli_gemini_models(tmpdir, monkeypatch):
 
 
 @pytest.mark.vcr
+def test_resolved_model():
+    model = llm.get_model("gemini-flash-latest")
+    response = model.prompt("hi", key=GEMINI_API_KEY)
+    response.text()
+    assert response.resolved_model == "gemini-2.5-flash-preview-09-2025"
+
+
+@pytest.mark.vcr
 def test_tools():
     model = llm.get_model("gemini-2.0-flash")
     names = ["Charles", "Sammy"]

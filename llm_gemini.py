@@ -45,6 +45,10 @@ GOOGLE_SEARCH_MODELS = {
     "gemini-2.5-pro",
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
+    "gemini-flash-latest",
+    "gemini-flash-lite-latest",
+    "gemini-2.5-flash-preview-09-2025",
+    "gemini-2.5-flash-lite-preview-09-2025",
 }
 
 # Older Google models used google_search_retrieval instead of google_search
@@ -70,6 +74,10 @@ THINKING_BUDGET_MODELS = {
     "gemini-2.5-pro",
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
+    "gemini-flash-latest",
+    "gemini-flash-lite-latest",
+    "gemini-2.5-flash-preview-09-2025",
+    "gemini-2.5-flash-lite-preview-09-2025",
 }
 
 NO_VISION_MODELS = {"gemma-3-1b-it", "gemma-3n-e4b-it"}
@@ -156,6 +164,11 @@ def register_models(register):
         "gemini-2.5-pro",
         # 22nd July 2025:
         "gemini-2.5-flash-lite",
+        # 25th Spetember 2025:
+        "gemini-flash-latest",
+        "gemini-flash-lite-latest",
+        "gemini-2.5-flash-preview-09-2025",
+        "gemini-2.5-flash-lite-preview-09-2025",
     ):
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         can_thinking_budget = model_id in THINKING_BUDGET_MODELS
@@ -543,6 +556,8 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
                         gathered.append(event)
                     events.clear()
         response.response_json = gathered[-1]
+        resolved_model = gathered[-1]["modelVersion"]
+        response.set_resolved_model(resolved_model)
         self.set_usage(response)
 
 
