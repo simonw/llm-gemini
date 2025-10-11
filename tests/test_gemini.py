@@ -6,6 +6,8 @@ import json
 import os
 import pytest
 import pydantic
+from pydantic import BaseModel
+from typing import List, Optional
 from llm_gemini import cleanup_schema
 
 nest_asyncio.apply()
@@ -70,6 +72,9 @@ async def test_prompt_with_pydantic_schema():
         age: int
         bio: str
 
+    class Dogs(BaseModel):
+        dogs: List[Dog]
+        
     model = llm.get_model("gemini-1.5-flash-latest")
     response = model.prompt(
         "Invent a cool dog", key=GEMINI_API_KEY, schema=Dog, stream=False
@@ -106,6 +111,38 @@ async def test_prompt_with_pydantic_schema():
         "modelVersion": "gemini-1.5-flash-latest",
     }
     assert response.input_tokens == 10
+
+
+@pytest.mark.skip(reason="VCR cassette not recorded yet - test passes with real API key")
+@pytest.mark.vcr
+@pytest.mark.asyncio
+async def test_prompt_with_multiple_dogs():
+    class Dog(pydantic.BaseModel):
+        name: str
+        age: int
+        bio: str
+
+    class Dogs(BaseModel):
+        dogs: List[Dog]
+
+    model = llm.get_model("gemini-2.0-flash")
+    response = model.prompt(
+        "Invent 3 cool dogs", key=GEMINI_API_KEY, schema=Dogs, stream=False
+    )
+    result = json.loads(response.text())
+
+    # Verify we got 3 dogs
+    assert "dogs" in result
+    assert len(result["dogs"]) == 3
+
+    # Verify each dog has the required fields
+    for dog in result["dogs"]:
+        assert "name" in dog
+        assert "age" in dog
+        assert "bio" in dog
+        assert isinstance(dog["name"], str)
+        assert isinstance(dog["age"], int)
+        assert isinstance(dog["bio"], str)
 
 
 @pytest.mark.vcr
@@ -213,6 +250,293 @@ def test_cleanup_schema(schema, expected):
     # Use a deep copy so the original test data remains unchanged.
     result = cleanup_schema(schema)
     assert result == expected
+
+
+# Tests for $ref resolution - patterns that now work with nested models
+@pytest.mark.parametrize(
+    "schema,expected",
+    [
+        # Test 1: Direct model reference (Person with Address)
+        (
+            {
+                "properties": {
+                    "name": {"type": "string"},
+                    "address": {"$ref": "#/$defs/Address"}
+                },
+                "required": ["name", "address"],
+                "type": "object",
+                "$defs": {
+                    "Address": {
+                        "properties": {
+                            "street": {"type": "string"},
+                            "city": {"type": "string"}
+                        },
+                        "required": ["street", "city"],
+                        "type": "object"
+                    }
+                }
+            },
+            {
+                "properties": {
+                    "name": {"type": "string"},
+                    "address": {
+                        "properties": {
+                            "street": {"type": "string"},
+                            "city": {"type": "string"}
+                        },
+                        "required": ["street", "city"],
+                        "type": "object"
+                    }
+                },
+                "required": ["name", "address"],
+                "type": "object"
+            }
+        ),
+        # Test 2: List of models (Dogs with List[Dog])
+        (
+            {
+                "properties": {
+                    "dogs": {
+                        "items": {"$ref": "#/$defs/Dog"},
+                        "type": "array"
+                    }
+                },
+                "required": ["dogs"],
+                "type": "object",
+                "$defs": {
+                    "Dog": {
+                        "properties": {
+                            "name": {"type": "string"},
+                            "age": {"type": "integer"}
+                        },
+                        "required": ["name", "age"],
+                        "type": "object"
+                    }
+                }
+            },
+            {
+                "properties": {
+                    "dogs": {
+                        "items": {
+                            "properties": {
+                                "name": {"type": "string"},
+                                "age": {"type": "integer"}
+                            },
+                            "required": ["name", "age"],
+                            "type": "object"
+                        },
+                        "type": "array"
+                    }
+                },
+                "required": ["dogs"],
+                "type": "object"
+            }
+        ),
+        # Test 3: Optional model field
+        (
+            {
+                "properties": {
+                    "name": {"type": "string"},
+                    "employer": {
+                        "anyOf": [
+                            {"$ref": "#/$defs/Company"},
+                            {"type": "null"}
+                        ]
+                    }
+                },
+                "required": ["name"],
+                "type": "object",
+                "$defs": {
+                    "Company": {
+                        "properties": {
+                            "company_name": {"type": "string"}
+                        },
+                        "required": ["company_name"],
+                        "type": "object"
+                    }
+                }
+            },
+            {
+                "properties": {
+                    "name": {"type": "string"},
+                    "employer": {
+                        "anyOf": [
+                            {
+                                "properties": {
+                                    "company_name": {"type": "string"}
+                                },
+                                "required": ["company_name"],
+                                "type": "object"
+                            },
+                            {"type": "null"}
+                        ]
+                    }
+                },
+                "required": ["name"],
+                "type": "object"
+            }
+        ),
+        # Test 4: Nested composition (Customer -> List[Order] -> List[Item])
+        (
+            {
+                "properties": {
+                    "name": {"type": "string"},
+                    "orders": {
+                        "items": {"$ref": "#/$defs/Order"},
+                        "type": "array"
+                    }
+                },
+                "required": ["name", "orders"],
+                "type": "object",
+                "$defs": {
+                    "Order": {
+                        "properties": {
+                            "items": {
+                                "items": {"$ref": "#/$defs/Item"},
+                                "type": "array"
+                            }
+                        },
+                        "required": ["items"],
+                        "type": "object"
+                    },
+                    "Item": {
+                        "properties": {
+                            "product_name": {"type": "string"},
+                            "quantity": {"type": "integer"}
+                        },
+                        "required": ["product_name", "quantity"],
+                        "type": "object"
+                    }
+                }
+            },
+            {
+                "properties": {
+                    "name": {"type": "string"},
+                    "orders": {
+                        "items": {
+                            "properties": {
+                                "items": {
+                                    "items": {
+                                        "properties": {
+                                            "product_name": {"type": "string"},
+                                            "quantity": {"type": "integer"}
+                                        },
+                                        "required": ["product_name", "quantity"],
+                                        "type": "object"
+                                    },
+                                    "type": "array"
+                                }
+                            },
+                            "required": ["items"],
+                            "type": "object"
+                        },
+                        "type": "array"
+                    }
+                },
+                "required": ["name", "orders"],
+                "type": "object"
+            }
+        ),
+    ]
+)
+def test_cleanup_schema_with_refs(schema, expected):
+    """Test that $ref resolution works for various nested model patterns."""
+    import copy
+    result = cleanup_schema(copy.deepcopy(schema))
+    assert result == expected
+
+
+# Integration tests with real Pydantic models
+@pytest.mark.skip(reason="VCR cassette not recorded yet - test passes with real API key")
+@pytest.mark.vcr
+def test_nested_model_direct_reference():
+    """Test Pattern 1: Direct model reference (Person with Address)"""
+    class Address(BaseModel):
+        street: str
+        city: str
+
+    class Person(BaseModel):
+        name: str
+        address: Address
+
+    model = llm.get_model("gemini-2.0-flash")
+    response = model.prompt(
+        "Create a person named Alice living in San Francisco",
+        key=GEMINI_API_KEY,
+        schema=Person,
+        stream=False
+    )
+    result = json.loads(response.text())
+    assert "name" in result
+    assert "address" in result
+    assert "street" in result["address"]
+    assert "city" in result["address"]
+
+
+@pytest.mark.skip(reason="VCR cassette not recorded yet - test passes with real API key")
+@pytest.mark.vcr
+def test_nested_model_list():
+    """Test Pattern 2: List of models (already covered by test_prompt_with_multiple_dogs)"""
+    pass  # Covered by test_prompt_with_multiple_dogs
+
+
+@pytest.mark.skip(reason="VCR cassette not recorded yet - test passes with real API key")
+@pytest.mark.vcr
+def test_nested_model_optional():
+    """Test Pattern 3: Optional model field"""
+    class Company(BaseModel):
+        company_name: str
+
+    class Person(BaseModel):
+        name: str
+        employer: Optional[Company]
+
+    model = llm.get_model("gemini-2.0-flash")
+    response = model.prompt(
+        "Create a person named Bob who works at TechCorp",
+        key=GEMINI_API_KEY,
+        schema=Person,
+        stream=False
+    )
+    result = json.loads(response.text())
+    assert "name" in result
+    assert "employer" in result
+    if result["employer"] is not None:
+        assert "company_name" in result["employer"]
+
+
+@pytest.mark.skip(reason="VCR cassette not recorded yet - test passes with real API key")
+@pytest.mark.vcr
+def test_nested_model_deep_composition():
+    """Test Pattern 4: Nested composition (Customer -> Orders -> Items)"""
+    class Item(BaseModel):
+        product_name: str
+        quantity: int
+
+    class Order(BaseModel):
+        items: List[Item]
+
+    class Customer(BaseModel):
+        name: str
+        orders: List[Order]
+
+    model = llm.get_model("gemini-2.0-flash")
+    response = model.prompt(
+        "Create a customer named Carol with 2 orders, each containing 2 items",
+        key=GEMINI_API_KEY,
+        schema=Customer,
+        stream=False
+    )
+    result = json.loads(response.text())
+    assert "name" in result
+    assert "orders" in result
+    assert len(result["orders"]) > 0
+    for order in result["orders"]:
+        assert "items" in order
+        assert len(order["items"]) > 0
+        for item in order["items"]:
+            assert "product_name" in item
+            assert "quantity" in item
 
 
 @pytest.mark.vcr

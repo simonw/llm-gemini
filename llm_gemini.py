@@ -207,6 +207,11 @@ def cleanup_schema(schema, in_properties=False):
     "Gemini supports only a subset of JSON schema"
     keys_to_remove = ("$schema", "additionalProperties", "title")
 
+    # First pass: resolve $ref references using $defs
+    if isinstance(schema, dict) and "$defs" in schema:
+        defs = schema.pop("$defs")
+        _resolve_refs(schema, defs)
+
     if isinstance(schema, dict):
         # Only remove keys if we're not inside a 'properties' block.
         if not in_properties:
@@ -222,6 +227,26 @@ def cleanup_schema(schema, in_properties=False):
         for item in schema:
             cleanup_schema(item, in_properties=in_properties)
     return schema
+
+
+def _resolve_refs(schema, defs):
+    """Recursively resolve $ref references in schema using definitions."""
+    if isinstance(schema, dict):
+        if "$ref" in schema:
+            # Extract the reference path (e.g., "#/$defs/Dog" -> "Dog")
+            ref_path = schema.pop("$ref")
+            if ref_path.startswith("#/$defs/"):
+                def_name = ref_path.split("/")[-1]
+                if def_name in defs:
+                    # Replace the $ref with the actual definition
+                    schema.update(copy.deepcopy(defs[def_name]))
+
+        # Recursively resolve refs in nested structures
+        for value in schema.values():
+            _resolve_refs(value, defs)
+    elif isinstance(schema, list):
+        for item in schema:
+            _resolve_refs(item, defs)
 
 
 class _SharedGemini:
