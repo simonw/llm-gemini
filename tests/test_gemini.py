@@ -74,7 +74,7 @@ async def test_prompt_with_pydantic_schema():
 
     class Dogs(BaseModel):
         dogs: List[Dog]
-        
+
     model = llm.get_model("gemini-1.5-flash-latest")
     response = model.prompt(
         "Invent a cool dog", key=GEMINI_API_KEY, schema=Dog, stream=False
@@ -113,7 +113,6 @@ async def test_prompt_with_pydantic_schema():
     assert response.input_tokens == 10
 
 
-@pytest.mark.skip(reason="VCR cassette not recorded yet - test passes with real API key")
 @pytest.mark.vcr
 @pytest.mark.asyncio
 async def test_prompt_with_multiple_dogs():
@@ -261,7 +260,7 @@ def test_cleanup_schema(schema, expected):
             {
                 "properties": {
                     "name": {"type": "string"},
-                    "address": {"$ref": "#/$defs/Address"}
+                    "address": {"$ref": "#/$defs/Address"},
                 },
                 "required": ["name", "address"],
                 "type": "object",
@@ -269,12 +268,12 @@ def test_cleanup_schema(schema, expected):
                     "Address": {
                         "properties": {
                             "street": {"type": "string"},
-                            "city": {"type": "string"}
+                            "city": {"type": "string"},
                         },
                         "required": ["street", "city"],
-                        "type": "object"
+                        "type": "object",
                     }
-                }
+                },
             },
             {
                 "properties": {
@@ -282,24 +281,21 @@ def test_cleanup_schema(schema, expected):
                     "address": {
                         "properties": {
                             "street": {"type": "string"},
-                            "city": {"type": "string"}
+                            "city": {"type": "string"},
                         },
                         "required": ["street", "city"],
-                        "type": "object"
-                    }
+                        "type": "object",
+                    },
                 },
                 "required": ["name", "address"],
-                "type": "object"
-            }
+                "type": "object",
+            },
         ),
         # Test 2: List of models (Dogs with List[Dog])
         (
             {
                 "properties": {
-                    "dogs": {
-                        "items": {"$ref": "#/$defs/Dog"},
-                        "type": "array"
-                    }
+                    "dogs": {"items": {"$ref": "#/$defs/Dog"}, "type": "array"}
                 },
                 "required": ["dogs"],
                 "type": "object",
@@ -307,12 +303,12 @@ def test_cleanup_schema(schema, expected):
                     "Dog": {
                         "properties": {
                             "name": {"type": "string"},
-                            "age": {"type": "integer"}
+                            "age": {"type": "integer"},
                         },
                         "required": ["name", "age"],
-                        "type": "object"
+                        "type": "object",
                     }
-                }
+                },
             },
             {
                 "properties": {
@@ -320,17 +316,17 @@ def test_cleanup_schema(schema, expected):
                         "items": {
                             "properties": {
                                 "name": {"type": "string"},
-                                "age": {"type": "integer"}
+                                "age": {"type": "integer"},
                             },
                             "required": ["name", "age"],
-                            "type": "object"
+                            "type": "object",
                         },
-                        "type": "array"
+                        "type": "array",
                     }
                 },
                 "required": ["dogs"],
-                "type": "object"
-            }
+                "type": "object",
+            },
         ),
         # Test 3: Optional model field
         (
@@ -338,23 +334,18 @@ def test_cleanup_schema(schema, expected):
                 "properties": {
                     "name": {"type": "string"},
                     "employer": {
-                        "anyOf": [
-                            {"$ref": "#/$defs/Company"},
-                            {"type": "null"}
-                        ]
-                    }
+                        "anyOf": [{"$ref": "#/$defs/Company"}, {"type": "null"}]
+                    },
                 },
                 "required": ["name"],
                 "type": "object",
                 "$defs": {
                     "Company": {
-                        "properties": {
-                            "company_name": {"type": "string"}
-                        },
+                        "properties": {"company_name": {"type": "string"}},
                         "required": ["company_name"],
-                        "type": "object"
+                        "type": "object",
                     }
-                }
+                },
             },
             {
                 "properties": {
@@ -362,29 +353,24 @@ def test_cleanup_schema(schema, expected):
                     "employer": {
                         "anyOf": [
                             {
-                                "properties": {
-                                    "company_name": {"type": "string"}
-                                },
+                                "properties": {"company_name": {"type": "string"}},
                                 "required": ["company_name"],
-                                "type": "object"
+                                "type": "object",
                             },
-                            {"type": "null"}
+                            {"type": "null"},
                         ]
-                    }
+                    },
                 },
                 "required": ["name"],
-                "type": "object"
-            }
+                "type": "object",
+            },
         ),
         # Test 4: Nested composition (Customer -> List[Order] -> List[Item])
         (
             {
                 "properties": {
                     "name": {"type": "string"},
-                    "orders": {
-                        "items": {"$ref": "#/$defs/Order"},
-                        "type": "array"
-                    }
+                    "orders": {"items": {"$ref": "#/$defs/Order"}, "type": "array"},
                 },
                 "required": ["name", "orders"],
                 "type": "object",
@@ -393,21 +379,21 @@ def test_cleanup_schema(schema, expected):
                         "properties": {
                             "items": {
                                 "items": {"$ref": "#/$defs/Item"},
-                                "type": "array"
+                                "type": "array",
                             }
                         },
                         "required": ["items"],
-                        "type": "object"
+                        "type": "object",
                     },
                     "Item": {
                         "properties": {
                             "product_name": {"type": "string"},
-                            "quantity": {"type": "integer"}
+                            "quantity": {"type": "integer"},
                         },
                         "required": ["product_name", "quantity"],
-                        "type": "object"
-                    }
-                }
+                        "type": "object",
+                    },
+                },
             },
             {
                 "properties": {
@@ -419,38 +405,38 @@ def test_cleanup_schema(schema, expected):
                                     "items": {
                                         "properties": {
                                             "product_name": {"type": "string"},
-                                            "quantity": {"type": "integer"}
+                                            "quantity": {"type": "integer"},
                                         },
                                         "required": ["product_name", "quantity"],
-                                        "type": "object"
+                                        "type": "object",
                                     },
-                                    "type": "array"
+                                    "type": "array",
                                 }
                             },
                             "required": ["items"],
-                            "type": "object"
+                            "type": "object",
                         },
-                        "type": "array"
-                    }
+                        "type": "array",
+                    },
                 },
                 "required": ["name", "orders"],
-                "type": "object"
-            }
+                "type": "object",
+            },
         ),
-    ]
+    ],
 )
 def test_cleanup_schema_with_refs(schema, expected):
     """Test that $ref resolution works for various nested model patterns."""
     import copy
+
     result = cleanup_schema(copy.deepcopy(schema))
     assert result == expected
 
 
-# Integration tests with real Pydantic models
-@pytest.mark.skip(reason="VCR cassette not recorded yet - test passes with real API key")
 @pytest.mark.vcr
 def test_nested_model_direct_reference():
     """Test Pattern 1: Direct model reference (Person with Address)"""
+
     class Address(BaseModel):
         street: str
         city: str
@@ -464,7 +450,7 @@ def test_nested_model_direct_reference():
         "Create a person named Alice living in San Francisco",
         key=GEMINI_API_KEY,
         schema=Person,
-        stream=False
+        stream=False,
     )
     result = json.loads(response.text())
     assert "name" in result
@@ -473,17 +459,16 @@ def test_nested_model_direct_reference():
     assert "city" in result["address"]
 
 
-@pytest.mark.skip(reason="VCR cassette not recorded yet - test passes with real API key")
 @pytest.mark.vcr
 def test_nested_model_list():
     """Test Pattern 2: List of models (already covered by test_prompt_with_multiple_dogs)"""
     pass  # Covered by test_prompt_with_multiple_dogs
 
 
-@pytest.mark.skip(reason="VCR cassette not recorded yet - test passes with real API key")
 @pytest.mark.vcr
 def test_nested_model_optional():
     """Test Pattern 3: Optional model field"""
+
     class Company(BaseModel):
         company_name: str
 
@@ -496,7 +481,7 @@ def test_nested_model_optional():
         "Create a person named Bob who works at TechCorp",
         key=GEMINI_API_KEY,
         schema=Person,
-        stream=False
+        stream=False,
     )
     result = json.loads(response.text())
     assert "name" in result
@@ -505,10 +490,10 @@ def test_nested_model_optional():
         assert "company_name" in result["employer"]
 
 
-@pytest.mark.skip(reason="VCR cassette not recorded yet - test passes with real API key")
 @pytest.mark.vcr
 def test_nested_model_deep_composition():
     """Test Pattern 4: Nested composition (Customer -> Orders -> Items)"""
+
     class Item(BaseModel):
         product_name: str
         quantity: int
@@ -525,7 +510,7 @@ def test_nested_model_deep_composition():
         "Create a customer named Carol with 2 orders, each containing 2 items",
         key=GEMINI_API_KEY,
         schema=Customer,
-        stream=False
+        stream=False,
     )
     result = json.loads(response.text())
     assert "name" in result

@@ -1,0 +1,72 @@
+interactions:
+- request:
+    body: '{"contents": [{"role": "user", "parts": [{"text": "Create a person named
+      Alice living in San Francisco"}]}], "safetySettings": [{"category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+      "threshold": "BLOCK_NONE"}, {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+      "threshold": "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold":
+      "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"}],
+      "generationConfig": {"response_mime_type": "application/json", "response_schema":
+      {"properties": {"name": {"title": "Name", "type": "string"}, "address": {"properties":
+      {"street": {"title": "Street", "type": "string"}, "city": {"title": "City",
+      "type": "string"}}, "required": ["street", "city"], "title": "Address", "type":
+      "object"}}, "required": ["name", "address"], "type": "object"}}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '809'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - python-httpx/0.25.2
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/2yPTUsDMRCG7/srwpyt1B69+VGkB7HC+kUpMrrjGsxmQjIryrL/3SRL2xScwzC8
+        887LM5uhUgre0Ta6QaEA52oTFaWG3NOOrZCVuNhJUXTo5eCdaijmaBH6SUcwQKGP+3l7ckjzbChZ
+        O27I7OyTNfVshT5gS7ckGDlxTwPOc+ek5i+yV9xnzrP5lA3Cgub/VXEWrmOoNuU7xaeRCY2W38RX
+        L59rKLjlOPoIfBv7mMHzV4/kg2abUlrqtNWzxel89mEwfOZE8BQc20CrJnn6O+tw9fRyQYub9u1h
+        /br+vuT7JVRj9QcAAP//0uHlonmcxeQpKMQo5SXmpsYAuTFKjjmZyUCmDkQ8MSUF6NpikFQ1SASo
+        kcwohilQKk5MSy2pDEosycxLR3UjsguBfi5JTc8vAkeGh2OQb7yzY4iru39QZLwHkBEfHODq6uyB
+        FEOQiE5KTMqERaGfq7uPp7unk48rws21OqTa5uLo5+4a5B8aHO/s7xfi6hdCBzuBPMfgYF/6WBbs
+        GhHq6OMTGe8aEeDj6exJhp1QVuxoNsaajQEAAAD//6JLNlYqLilKTS2BZOLQvOy8/PI8aDYGZeRk
+        YIBA5IIT8xTcihLzkjOLk/NjwPl/NE+P5unRPE1SngYAAAD//6JHnq6NyaulOGumAX1ZnBGUmlgM
+        8XdwiH+A0mjGJcWHIyzjGplBcycibaPIG5vjzNhmxjTL2EZmqBkbuxupZJmxOX1KEQAAAAD//4oF
+        AAAA//8DANpF9BaUDQAA
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Sat, 11 Oct 2025 05:23:04 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=639
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

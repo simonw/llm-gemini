@@ -1,0 +1,82 @@
+interactions:
+- request:
+    body: '{"contents": [{"role": "user", "parts": [{"text": "Invent 3 cool dogs"}]}],
+      "safetySettings": [{"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold":
+      "BLOCK_NONE"}, {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold":
+      "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+      {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"}], "generationConfig":
+      {"response_mime_type": "application/json", "response_schema": {"properties":
+      {"dogs": {"items": {"properties": {"name": {"title": "Name", "type": "string"},
+      "age": {"title": "Age", "type": "integer"}, "bio": {"title": "Bio", "type":
+      "string"}}, "required": ["name", "age", "bio"], "title": "Dog", "type": "object"},
+      "title": "Dogs", "type": "array"}}, "required": ["dogs"], "type": "object"}}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '800'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - python-httpx/0.25.2
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/7xTQU/CMBS+71csPYMxHIh6m6MZi2PDbSiEmKW4x2wY7VyLkSz8d9vhoCZe9EAP
+        zet73/u+1+brsrFsG70SltOcSBDozl6qjG037a5rnElgUhW6lEpWpJZn7HE1RqwgEj51E2qQkT+c
+        4pfema3mJWjoludQdvBDB0CCrEHuYyIpK36KmpLqEhIKXu8109iJJ5nrpNiL4kU2VkGWTDF2x6hn
+        tlQ1X5EVLalsu0LsBb7n3wf4PPOh91e1kRN6OI5mSeZGYYrD9AKa6uQkyeQyYgmez5wgWGR4Pg18
+        1/+H5nf0YnWn1g5oJ0gBE5BEeZGcHKcZt5VM+QaYy3etF4dHSSS5JOWvFaNJjBQlLU3vGF5WriPd
+        sCmem7dR9CazZU6vZ2/f7mjbJ6gF5UyTFLCljPYHV9f9dUnEW0uIahAVZwL8XGPUl6pI1L8NhpCz
+        j2I6eHjevD/eIOtgfQEAAP//0uHlonmmjMlTUIhRGs2ZozlzNGcSnzMBAAAA//+iR85MyU8vjgEp
+        BWVRoCoIBcqteYm5qSCZGCWn/JySGCUdhNRoRh7NyKMZmfiMDAAAAP//okdGBgYzKLcaI2XTpMx8
+        SAZ2VMjITM/QTc1LLUqvVHDKL0pJLVJwzs/JyUwdzcqjWXk0KxOflQEAAAD//+yUMRLDMAgEv3Jd
+        urwj3yAKtjXCUgyWFf8+WC9IlUoVBcfBDHP7jyhjjR+0uC8gSDkYU1FMGu3JbPDFoLl/EKFUNbY7
+        HnzzjjQ6DfXdByiDXoffUZX70EIuQcoUUhcIk2ZPLTI37BpDMmzVi5yXIcLlIFYGIgYiBiJ+R8QX
+        AAD//6JLEZGSr1AJzPwKJYkVqcWKMUqQWr9WB08z3qc0LxGlGQ9tMphjbTKM5vrRXD+a64nP9QAA
+        AAD//+yXMQ7DIAxFr+IT5BzdcwInOMGNwVWcCHH7Gqqoa6dO2ZD4GBDi/e+//PoZJXUvD7xmXpgC
+        jDzRzm7Vj9O2+okN5m6+NWef5CSgeqUGeKG163b7j1qkafCAIxIk1TzA6CPKT/UYIeqTBcVTAecu
+        saylF2ID33ufSarLKgocCtF7igUTt/TQyrD19NBX+queAbR4AwK6QMJcnWCr6y2282DBPdjwxdhN
+        n5s+N31+p88bAAD//6LXID6OpoV7ZlVuPra2hSn24QhgN6MIWFiByhJgBycxKSdVwa0oNS85Q8Gp
+        NCcHVDJAuz/AIqcIlIVBJQhQFaTwAxZ2qXkpOanFxQrFpQUFwEIIWKak5+engUwsyUyG9odGy5DR
+        MmS0DCG+DAEAAAD//6JLCyYRWPkXl0CaAcmlKaBcDM7TkMEG8PhFbmJ2Kqhzo1AMbEyk6igA3Z+a
+        nJmYA8znSanJiaXFqcC2hkI2sDFSDGrEgNoeoMYLqKmCaEGAqNiYvFqKC4E0YJAWZwSlJhZDAjk4
+        xD9AabSIIMWHI6yIMDKBlgSIjIQqb2SBsxAxMjWiWTFiZIJajmB3JbUsM7KgT6kFAAAA//+KBQAA
+        AP//AwCrQI4NUyQAAA==
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Sat, 11 Oct 2025 05:23:02 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=589
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

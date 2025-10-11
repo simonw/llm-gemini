@@ -1,0 +1,77 @@
+interactions:
+- request:
+    body: '{"contents": [{"role": "user", "parts": [{"text": "Create a customer named
+      Carol with 2 orders, each containing 2 items"}]}], "safetySettings": [{"category":
+      "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}, {"category":
+      "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"}, {"category":
+      "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HARASSMENT",
+      "threshold": "BLOCK_NONE"}], "generationConfig": {"response_mime_type": "application/json",
+      "response_schema": {"properties": {"name": {"title": "Name", "type": "string"},
+      "orders": {"items": {"properties": {"items": {"items": {"properties": {"product_name":
+      {"title": "Product Name", "type": "string"}, "quantity": {"title": "Quantity",
+      "type": "integer"}}, "required": ["product_name", "quantity"], "title": "Item",
+      "type": "object"}, "title": "Items", "type": "array"}}, "required": ["items"],
+      "title": "Order", "type": "object"}, "title": "Orders", "type": "array"}}, "required":
+      ["name", "orders"], "type": "object"}}}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1031'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - python-httpx/0.25.2
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/7xSUW+CMBB+51eQPuviXLJke2PYIBmiA9w0xpA6TkbEltGSzBD++1ocWpO9bA/2
+        obneffd9d823qg3TRO+EJllCBHD0aK5kxjTr9lY1RgVQIQtdSiYLUooz9nhqLZYQAV+qCdVIyzen
+        eN07s5UsBwXdswTyDt50AMTJFsQhICKj6aWoLimXEJCy8qCYxlYwiW0rws40WMZjGcThDGN7jHp6
+        S1GyDdlkeSbaLh87nuu4Tx4+z9z0/qo2snwHB9N5GNtTP8J+dAVN+bLCcHIdsRAv5pbnLWO8mHmu
+        7f5D8ydaG92rtQOqOElhAoJIL5KT4xTjvhAR2wG1WdV68fb+qIkEEyT/vaS18ZEkzXLdPZqbpe9I
+        N26EF/o+kv+C2tAXUOO333d07iuUPGNUsaSwz2jWH94M+tuc8I+WEZXAC0Y5uInCVEAL4r/dPfeH
+        Dn3YzSoOn7uXATIa4xsAAP//0uHlonm+jMlTUIhRGs2co5lzNHOSlDkBAAAA//+iR+bMS8xNjQEy
+        YpScE4EZMEZJB5Jd84tSgP4AyUSDBID6IRRQ62hGHs3IoxmZlIwMAAAA//+iSy2rlFmSmoucY8GK
+        EUxQrgYGYUppckk8ItcHZ2QWlYxm6dEsPZqlScrSAAAAAP//ok+W1kHNvoWliXklwFAAZV0jhFSt
+        DgkZPgBoRDFekw2RTB4tGUZLhtGSgaSSAQAAAP//oleXGuwJCANWAMAzP9mNgfxU3GXDaFkwWhaM
+        lgUklQUAAAAA//+iTysBtcompTHgkViCtylgjGQuepkDooBsypsIacAQLs4ISk0shoR5cIh/gNJo
+        oUGKD0dYoWFiCi0ZEPkKteQwMcJdqliY06xYMTFFLVawu5JaZZiJEX0KMQAAAAD//4oFAAAA//8D
+        AMsfRma7GwAA
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Sat, 11 Oct 2025 05:23:06 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=502
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1
