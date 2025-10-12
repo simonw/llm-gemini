@@ -433,6 +433,146 @@ def test_cleanup_schema_with_refs(schema, expected):
     assert result == expected
 
 
+def test_recursive_schema_raises_error():
+    """Test that recursive self-referential schemas raise a descriptive error."""
+    # Simulate a recursive Node class: Node has a field 'next' that references Node
+    recursive_schema = {
+        "properties": {
+            "value": {"type": "string"},
+            "next": {
+                "anyOf": [
+                    {"$ref": "#/$defs/Node"},
+                    {"type": "null"}
+                ]
+            }
+        },
+        "required": ["value"],
+        "type": "object",
+        "$defs": {
+            "Node": {
+                "properties": {
+                    "value": {"type": "string"},
+                    "next": {
+                        "anyOf": [
+                            {"$ref": "#/$defs/Node"},
+                            {"type": "null"}
+                        ]
+                    }
+                },
+                "required": ["value"],
+                "type": "object"
+            }
+        }
+    }
+
+    import copy
+    with pytest.raises(ValueError) as exc_info:
+        cleanup_schema(copy.deepcopy(recursive_schema))
+
+    error_message = str(exc_info.value)
+    assert "Recursive schema detected" in error_message
+    assert "Node" in error_message
+    assert "directly references itself" in error_message
+    assert "Gemini API does not support recursive Pydantic models" in error_message
+
+
+def test_indirect_recursive_schema_raises_error():
+    """Test that indirect recursion (A -> B -> A) is detected and raises an error."""
+    # Simulate class A with a field of type B, and class B with a field of type A
+    indirect_recursive_schema = {
+        "properties": {
+            "name": {"type": "string"},
+            "b_field": {"$ref": "#/$defs/B"}
+        },
+        "required": ["name"],
+        "type": "object",
+        "$defs": {
+            "A": {
+                "properties": {
+                    "name": {"type": "string"},
+                    "b_field": {"$ref": "#/$defs/B"}
+                },
+                "required": ["name"],
+                "type": "object"
+            },
+            "B": {
+                "properties": {
+                    "id": {"type": "integer"},
+                    "a_field": {"$ref": "#/$defs/A"}
+                },
+                "required": ["id"],
+                "type": "object"
+            }
+        }
+    }
+
+    import copy
+    with pytest.raises(ValueError) as exc_info:
+        cleanup_schema(copy.deepcopy(indirect_recursive_schema))
+
+    error_message = str(exc_info.value)
+    assert "Recursive schema detected" in error_message
+    assert "indirectly references itself through" in error_message
+    # Should mention both types involved in the cycle
+    assert "A" in error_message and "B" in error_message
+    assert "Gemini API does not support recursive Pydantic models" in error_message
+
+
+def test_recursive_pydantic_model_raises_error():
+    """Test that recursive Pydantic models raise an error when schema is generated at test time.
+
+    This test complements test_recursive_schema_raises_error by using actual Pydantic
+    classes rather than hand-crafted JSON schemas. If Pydantic changes how it generates
+    schemas in a future version, this test will catch any incompatibility.
+    """
+    class Node(BaseModel):
+        value: str
+        next: Optional['Node'] = None
+
+    # Generate schema from Pydantic model at test time
+    pydantic_schema = Node.model_json_schema()
+
+    import copy
+    with pytest.raises(ValueError) as exc_info:
+        cleanup_schema(copy.deepcopy(pydantic_schema))
+
+    error_message = str(exc_info.value)
+    assert "Recursive schema detected" in error_message
+    assert "directly references itself" in error_message
+    assert "Gemini API does not support recursive Pydantic models" in error_message
+
+
+def test_indirect_recursive_pydantic_models_raise_error():
+    """Test that indirectly recursive Pydantic models are detected when schema is generated at test time.
+
+    This test complements test_indirect_recursive_schema_raises_error by using actual
+    Pydantic classes rather than hand-crafted JSON schemas. If Pydantic changes how it
+    generates schemas in a future version, this test will catch any incompatibility.
+    """
+    class B(BaseModel):
+        id: int
+        a_field: 'A'
+
+    class A(BaseModel):
+        name: str
+        b_field: B
+
+    # Generate schema from Pydantic model at test time
+    pydantic_schema = A.model_json_schema()
+
+    import copy
+    with pytest.raises(ValueError) as exc_info:
+        cleanup_schema(copy.deepcopy(pydantic_schema))
+
+    error_message = str(exc_info.value)
+    assert "Recursive schema detected" in error_message
+    assert "indirectly references itself through" in error_message
+    # Should mention both types involved in the cycle
+    assert "A" in error_message and "B" in error_message
+    assert "Gemini API does not support recursive Pydantic models" in error_message
+
+
+# Integration tests with real Pydantic models
 @pytest.mark.vcr
 def test_nested_model_direct_reference():
     """Test Pattern 1: Direct model reference (Person with Address)"""
