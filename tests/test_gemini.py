@@ -581,3 +581,79 @@ def test_tools():
     assert second.tool_calls()[0].name == "pelican_name_generator"
     assert second.prompt.tool_results[0].output == "Charles"
     assert third.prompt.tool_results[0].output == "Sammy"
+
+
+@pytest.mark.vcr
+def test_tools_with_nested_pydantic_models():
+    """Test that tools with nested Pydantic model schemas work correctly.
+
+    This verifies that the fix from PR #107 is applied to tool schemas,
+    ensuring $ref references in tool input schemas are properly resolved.
+    """
+
+    class Address(BaseModel):
+        """Address information"""
+        street: str
+        city: str
+        zipcode: str
+
+    class PersonInput(BaseModel):
+        """Input for creating a person with address"""
+        name: str
+        age: int
+        address: Address
+
+    # Mock database of people
+    people_db = []
+
+    def add_person(name: str, age: int, address: dict) -> str:
+        """Add a person with their address to the database"""
+        people_db.append({
+            "name": name,
+            "age": age,
+            "address": address
+        })
+        return f"Added {name} (age {age}) living at {address['street']}, {address['city']}"
+
+    model = llm.get_model("gemini-flash-latest")
+
+    # Create a tool with nested Pydantic model schema
+    # Convert Pydantic model to JSON schema
+    input_schema = PersonInput.model_json_schema()
+
+    add_person_tool = llm.Tool(
+        name="add_person",
+        description="Add a person with their address to the database",
+        input_schema=input_schema,
+        implementation=add_person,
+    )
+
+    chain_response = model.chain(
+        "Add Alice who is 30 years old and lives at 123 Main St, San Francisco, CA 94102 to the database",
+        tools=[add_person_tool],
+        key=GEMINI_API_KEY,
+    )
+
+    text = chain_response.text()
+
+    # Verify the tool was called
+    assert len(chain_response._responses) >= 2
+    first_response = chain_response._responses[0]
+    assert len(first_response.tool_calls()) == 1
+
+    tool_call = first_response.tool_calls()[0]
+    assert tool_call.name == "add_person"
+
+    # Verify the nested address structure was properly parsed
+    assert "name" in tool_call.arguments
+    assert "age" in tool_call.arguments
+    assert "address" in tool_call.arguments
+    assert isinstance(tool_call.arguments["address"], dict)
+    assert "street" in tool_call.arguments["address"]
+    assert "city" in tool_call.arguments["address"]
+    assert "zipcode" in tool_call.arguments["address"]
+
+    # Verify the person was added to the database
+    assert len(people_db) == 1
+    assert people_db[0]["name"] == tool_call.arguments["name"]
+    assert people_db[0]["age"] == tool_call.arguments["age"]
