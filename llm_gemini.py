@@ -1,5 +1,6 @@
 import click
 import copy
+import re
 import httpx
 import ijson
 import json
@@ -114,6 +115,7 @@ ATTACHMENT_TYPES = {
     "video/wmv",
     "video/3gpp",
     "video/quicktime",
+    "video/youtube",
 }
 
 
@@ -200,7 +202,22 @@ def resolve_type(attachment):
         mime_type = "audio/mp3"
     if mime_type == "application/ogg":
         mime_type = "audio/ogg"
+    # Check if this is a YouTube URL
+    if attachment.url and is_youtube_url(attachment.url):
+        return "video/youtube"
     return mime_type
+
+
+def is_youtube_url(url):
+    """Check if a URL is a YouTube video URL"""
+    if not url:
+        return False
+    youtube_patterns = [
+        r'^https?://(www\.)?youtube\.com/watch\?v=',
+        r'^https?://youtu\.be/',
+        r'^https?://(www\.)?youtube\.com/embed/',
+    ]
+    return any(re.match(pattern, url) for pattern in youtube_patterns)
 
 
 def cleanup_schema(schema, in_properties=False):
@@ -357,14 +374,7 @@ class _SharedGemini:
                 parts = []
                 for attachment in response.attachments:
                     mime_type = resolve_type(attachment)
-                    parts.append(
-                        {
-                            "inlineData": {
-                                "data": attachment.base64_content(),
-                                "mimeType": mime_type,
-                            }
-                        }
-                    )
+                    parts.append(self._build_attachment_part(attachment, mime_type))
                 if response.prompt.prompt:
                     parts.append({"text": response.prompt.prompt})
                 if response.prompt.tool_results:
@@ -419,17 +429,29 @@ class _SharedGemini:
             )
         for attachment in prompt.attachments:
             mime_type = resolve_type(attachment)
-            parts.append(
-                {
-                    "inlineData": {
-                        "data": attachment.base64_content(),
-                        "mimeType": mime_type,
-                    }
-                }
-            )
+            parts.append(self._build_attachment_part(attachment, mime_type))
 
         messages.append({"role": "user", "parts": parts})
         return messages
+
+
+    def _build_attachment_part(self, attachment, mime_type):
+        """Build the appropriate part for an attachment based on its type"""
+        if mime_type == "video/youtube":
+            return {
+                "fileData": {
+                    "mimeType": mime_type,
+                    "fileUri": attachment.url
+                }
+            }
+        else:
+            return {
+                "inlineData": {
+                    "data": attachment.base64_content(),
+                    "mimeType": mime_type,
+                }
+            }
+
 
     def build_request_body(self, prompt, conversation):
         body = {

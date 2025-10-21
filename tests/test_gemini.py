@@ -8,7 +8,7 @@ import pytest
 import pydantic
 from pydantic import BaseModel
 from typing import List, Optional
-from llm_gemini import cleanup_schema
+from llm_gemini import cleanup_schema, is_youtube_url
 
 nest_asyncio.apply()
 
@@ -581,3 +581,19 @@ def test_tools():
     assert second.tool_calls()[0].name == "pelican_name_generator"
     assert second.prompt.tool_results[0].output == "Charles"
     assert third.prompt.tool_results[0].output == "Sammy"
+
+
+def test_youtube_url_detection():
+    assert is_youtube_url("https://www.youtube.com/watch?v=abc123")
+    assert is_youtube_url("https://youtu.be/abc123")
+    assert is_youtube_url("https://www.youtube.com/embed/abc123")
+    assert is_youtube_url("http://www.youtube.com/watch?v=abc123")
+    assert is_youtube_url("http://youtu.be/abc123")
+    assert is_youtube_url("https://www.youtube.com/watch?v=abc123&feature=share")
+    assert not is_youtube_url("https://example.com/video.mp4")
+    assert not is_youtube_url("https://vimeo.com/123456")
+    assert not is_youtube_url("https://www.youtube.com/user/username")
+    assert not is_youtube_url("https://www.youtube.com/")
+    assert not is_youtube_url(None)
+
+
