@@ -522,11 +522,19 @@ class _SharedGemini:
                 if config_value is not None:
                     generation_config[other_key] = config_value
 
-        for response in conversation:
-            for attachment in response.attachments:
-                if attachment.url and is_youtube_url(attachment.url):
-                    generation_config.update({"mediaResolution": "MEDIA_RESOLUTION_LOW"})
-                    break
+        has_youtube = any(
+               attachment.url and is_youtube_url(attachment.url)
+               for attachment in prompt.attachments
+               ) or (
+                   conversation and any(
+                       attachment.url and is_youtube_url(attachment.url)
+                       for response in conversation.responses
+                       for attachment in response.attachments
+                 )
+        )
+
+        if has_youtube:
+            generation_config["mediaResolution"] = "MEDIA_RESOLUTION_LOW"
 
         if generation_config:
             body["generationConfig"] = generation_config
