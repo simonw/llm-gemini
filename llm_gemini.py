@@ -87,6 +87,7 @@ ATTACHMENT_TYPES = {
     # Text
     "text/plain",
     "text/csv",
+    "text/html; charset=utf-8",
     # PDF
     "application/pdf",
     # Images
@@ -520,6 +521,9 @@ class _SharedGemini:
                 config_value = getattr(prompt.options, key, None)
                 if config_value is not None:
                     generation_config[other_key] = config_value
+
+        if attachment.url and is_youtube_url(attachment.url):
+            generation_config.update({"mediaResolution": "MEDIA_RESOLUTION_LOW"})
 
         if generation_config:
             body["generationConfig"] = generation_config
