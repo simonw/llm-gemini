@@ -335,6 +335,13 @@ class _SharedGemini:
             ),
             default=None,
         )
+        media_resolution: Optional[str] = Field(
+            description=(
+                "Media resolution for the input media (esp. YouTube)"
+                "- default is LOW, other values could be MEDIUM, HIGH, or UNSPECIFIED"
+            ),
+            default="LOW",
+        )
 
     class OptionsWithGoogleSearch(Options):
         google_search: Optional[bool] = Field(
@@ -533,9 +540,12 @@ class _SharedGemini:
                  )
         )
 
-        if has_youtube:
-            generation_config["mediaResolution"] = "MEDIA_RESOLUTION_LOW"
-
+        # See https://ai.google.dev/api/generate-content#MediaResolution for mediaResolution token counts
+        if (prompt.options and prompt.options.media_resolution):
+            generation_config["mediaResolution"] = f"MEDIA_RESOLUTION_{prompt.options.media_resolution}"
+        elif has_youtube: # support longer videos even if no option set
+            generation_config["mediaResolution"] = "MEDIA_RESOLUTION_LOW" 
+ 
         if generation_config:
             body["generationConfig"] = generation_config
 
