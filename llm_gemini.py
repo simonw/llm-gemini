@@ -242,9 +242,9 @@ def is_youtube_url(url):
     if not url:
         return False
     youtube_patterns = [
-        r'^https?://(www\.)?youtube\.com/watch\?v=',
-        r'^https?://youtu\.be/',
-        r'^https?://(www\.)?youtube\.com/embed/',
+        r"^https?://(www\.)?youtube\.com/watch\?v=",
+        r"^https?://youtu\.be/",
+        r"^https?://(www\.)?youtube\.com/embed/",
     ]
     return any(re.match(pattern, url) for pattern in youtube_patterns)
 
@@ -480,16 +480,10 @@ class _SharedGemini:
         messages.append({"role": "user", "parts": parts})
         return messages
 
-
     def _build_attachment_part(self, attachment, mime_type):
         """Build the appropriate part for an attachment based on its type"""
         if mime_type == "video/youtube":
-            return {
-                "fileData": {
-                    "mimeType": mime_type,
-                    "fileUri": attachment.url
-                }
-            }
+            return {"fileData": {"mimeType": mime_type, "fileUri": attachment.url}}
         else:
             return {
                 "inlineData": {
@@ -497,7 +491,6 @@ class _SharedGemini:
                     "mimeType": mime_type,
                 }
             }
-
 
     def build_request_body(self, prompt, conversation):
         body = {
@@ -573,22 +566,25 @@ class _SharedGemini:
                     generation_config[other_key] = config_value
 
         has_youtube = any(
-               attachment.url and is_youtube_url(attachment.url)
-               for attachment in prompt.attachments
-               ) or (
-                   conversation and any(
-                       attachment.url and is_youtube_url(attachment.url)
-                       for response in conversation.responses
-                       for attachment in response.attachments
-                 )
+            attachment.url and is_youtube_url(attachment.url)
+            for attachment in prompt.attachments
+        ) or (
+            conversation
+            and any(
+                attachment.url and is_youtube_url(attachment.url)
+                for response in conversation.responses
+                for attachment in response.attachments
+            )
         )
 
         # See https://ai.google.dev/api/generate-content#MediaResolution for mediaResolution token counts
-        if (prompt.options and prompt.options.media_resolution):
-            generation_config["mediaResolution"] = f"MEDIA_RESOLUTION_{prompt.options.media_resolution.value.upper()}"
-        elif has_youtube: # support longer videos even if no option set
-            generation_config["mediaResolution"] = "MEDIA_RESOLUTION_LOW" 
- 
+        if prompt.options and prompt.options.media_resolution:
+            generation_config["mediaResolution"] = (
+                f"MEDIA_RESOLUTION_{prompt.options.media_resolution.value.upper()}"
+            )
+        elif has_youtube:  # support longer videos even if no option set
+            generation_config["mediaResolution"] = "MEDIA_RESOLUTION_LOW"
+
         if generation_config:
             body["generationConfig"] = generation_config
 
