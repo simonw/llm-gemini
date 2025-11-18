@@ -526,7 +526,7 @@ class _SharedGemini:
                         {
                             "name": tool.name,
                             "description": tool.description,
-                            "parameters": tool.input_schema,
+                            "parameters": cleanup_schema(copy.deepcopy(tool.input_schema)),
                         }
                         for tool in prompt.tools
                     ]

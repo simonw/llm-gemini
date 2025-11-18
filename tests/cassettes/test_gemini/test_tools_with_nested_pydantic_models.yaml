@@ -1,0 +1,152 @@
+interactions:
+- request:
+    body: '{"contents":[{"role":"user","parts":[{"text":"Add Alice who is 30 years
+      old and lives at 123 Main St, San Francisco, CA 94102 to the database"}]}],"safetySettings":[{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}],"tools":[{"functionDeclarations":[{"name":"add_person","description":"Add
+      a person with their address to the database","parameters":{"description":"Input
+      for creating a person with address","properties":{"name":{"title":"Name","type":"string"},"age":{"title":"Age","type":"integer"},"address":{"description":"Address
+      information","properties":{"street":{"title":"Street","type":"string"},"city":{"title":"City","type":"string"},"zipcode":{"title":"Zipcode","type":"string"}},"required":["street","city","zipcode"],"title":"Address","type":"object"}},"required":["name","age","address"],"type":"object"}}]}]}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1048'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - python-httpx/0.28.1
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:streamGenerateContent
+  response:
+    body:
+      string: !!binary |
+        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
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Mon, 13 Oct 2025 03:33:11 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=2042
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents":[{"role":"user","parts":[{"text":"Add Alice who is 30 years
+      old and lives at 123 Main St, San Francisco, CA 94102 to the database"}]},{"role":"model","parts":[{"text":""},{"function_call":{"name":"add_person","args":{"name":"Alice","address":{"city":"San
+      Francisco","zipcode":"94102","street":"123 Main St"},"age":30}}}]},{"role":"user","parts":[{"function_response":{"name":"add_person","response":{"output":"Added
+      Alice (age 30) living at 123 Main St, San Francisco"}}}]}],"safetySettings":[{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}],"tools":[{"functionDeclarations":[{"name":"add_person","description":"Add
+      a person with their address to the database","parameters":{"description":"Input
+      for creating a person with address","properties":{"name":{"title":"Name","type":"string"},"age":{"title":"Age","type":"integer"},"address":{"description":"Address
+      information","properties":{"street":{"title":"Street","type":"string"},"city":{"title":"City","type":"string"},"zipcode":{"title":"Zipcode","type":"string"}},"required":["street","city","zipcode"],"title":"Address","type":"object"}},"required":["name","age","address"],"type":"object"}}]}]}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1388'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - python-httpx/0.28.1
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:streamGenerateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/7xTXWvCMBR9768oedqDHeImw711NWhZ/aCtUxEp0V5dsCZdEzdF/O9Lq9UIY2MM
+        1odyc+859+SU08neME00JyymMZEg0KM5UR3T3BfvfMaZBCbVoGypZkoyecEen71WK4iEbU5CdkLn
+        YN6QJZhIQxzO9bRy2ZvxBHLSmseQlPBDCUCUxbBV8+q5I8gC5M4nkrLl9YX06yiDEpY82+W727bf
+        iRw7xK2eP44CPBrYnjeO8KjvuY4boopOTDM+IzOaUFlwu7jluS33ycMXL4fKbzXbqoiCPsZO+1/U
+        fDsIOrj7vTWvN/yLStPutrDfGwSR0+uGP4l96exUTY3yVCQDbYTKTgckUQEl5xjmG9epDPkKmMM3
+        RUBr9w9HUS3QV4C701hySZJrav2UKX2vaCpVmui50v4BlVFS+gnxSDesBK6vVSbZKA0WH/gY8xfI
+        BOUsX7OENWXUqt3WrUVCxKuVZvBO4cOqNqxatVYvJFAGIuVMgBvnHKvtCdKZBc3G25CLQb8qnhsr
+        e4yMg/EJAAD//9Lh5aJ59jY20FTIySwDZj+FxBIFQyNjBd/EzDyF4BIdheDEPAW3osS85Mzi5HyF
+        jMRihaTU1DyFxJSU1BSFknyFkozU0RJhEJcI1LFsSBQMRka4SwYzy+FXMgAAAAD//6JHyaAAipak
+        xOJUPYpzeRrQ78UZQamJxZDQCA7xD1AaLQNGywCqlgEmuMsAc8PhVwYAAAAA//+KBQAAAP//AwDz
+        QTEL/AsAAA==
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Mon, 13 Oct 2025 03:33:12 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=370
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1
