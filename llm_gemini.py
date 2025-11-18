@@ -1,9 +1,11 @@
 import click
 import copy
+from enum import Enum
 import httpx
 import ijson
 import json
 import llm
+import re
 from pydantic import Field
 from typing import Optional
 
@@ -49,6 +51,7 @@ GOOGLE_SEARCH_MODELS = {
     "gemini-flash-lite-latest",
     "gemini-2.5-flash-preview-09-2025",
     "gemini-2.5-flash-lite-preview-09-2025",
+    "gemini-3-pro-preview",
 }
 
 # Older Google models used google_search_retrieval instead of google_search
@@ -80,12 +83,34 @@ THINKING_BUDGET_MODELS = {
     "gemini-2.5-flash-lite-preview-09-2025",
 }
 
+THINKING_LEVEL_MODELS = {
+    "gemini-3-pro-preview",
+}
+
 NO_VISION_MODELS = {"gemma-3-1b-it", "gemma-3n-e4b-it"}
+
+
+class ThinkingLevel(str, Enum):
+    """Allowed thinking levels for Gemini models."""
+
+    LOW = "low"
+    HIGH = "high"
+
+
+class MediaResolution(str, Enum):
+    """Allowed media resolution values for Gemini models."""
+
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    UNSPECIFIED = "unspecified"
+
 
 ATTACHMENT_TYPES = {
     # Text
     "text/plain",
     "text/csv",
+    "text/html; charset=utf-8",
     # PDF
     "application/pdf",
     # Images
@@ -114,6 +139,7 @@ ATTACHMENT_TYPES = {
     "video/wmv",
     "video/3gpp",
     "video/quicktime",
+    "video/youtube",
 }
 
 
@@ -169,9 +195,12 @@ def register_models(register):
         "gemini-flash-lite-latest",
         "gemini-2.5-flash-preview-09-2025",
         "gemini-2.5-flash-lite-preview-09-2025",
+        # 18th November 2025:
+        "gemini-3-pro-preview",
     ):
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         can_thinking_budget = model_id in THINKING_BUDGET_MODELS
+        can_thinking_level = model_id in THINKING_LEVEL_MODELS
         can_vision = model_id not in NO_VISION_MODELS
         can_schema = "flash-thinking" not in model_id and "gemma-3" not in model_id
         register(
@@ -180,6 +209,7 @@ def register_models(register):
                 can_vision=can_vision,
                 can_google_search=can_google_search,
                 can_thinking_budget=can_thinking_budget,
+                can_thinking_level=can_thinking_level,
                 can_schema=can_schema,
             ),
             AsyncGeminiPro(
@@ -187,6 +217,7 @@ def register_models(register):
                 can_vision=can_vision,
                 can_google_search=can_google_search,
                 can_thinking_budget=can_thinking_budget,
+                can_thinking_level=can_thinking_level,
                 can_schema=can_schema,
             ),
             aliases=(model_id,),
@@ -200,7 +231,22 @@ def resolve_type(attachment):
         mime_type = "audio/mp3"
     if mime_type == "application/ogg":
         mime_type = "audio/ogg"
+    # Check if this is a YouTube URL
+    if attachment.url and is_youtube_url(attachment.url):
+        return "video/youtube"
     return mime_type
+
+
+def is_youtube_url(url):
+    """Check if a URL is a YouTube video URL"""
+    if not url:
+        return False
+    youtube_patterns = [
+        r'^https?://(www\.)?youtube\.com/watch\?v=',
+        r'^https?://youtu\.be/',
+        r'^https?://(www\.)?youtube\.com/embed/',
+    ]
+    return any(re.match(pattern, url) for pattern in youtube_patterns)
 
 
 def cleanup_schema(schema, in_properties=False):
@@ -317,6 +363,13 @@ class _SharedGemini:
             ),
             default=None,
         )
+        media_resolution: Optional[MediaResolution] = Field(
+            description=(
+                "Media resolution for the input media (esp. YouTube) "
+                "- default is low, other values are medium, high, or unspecified"
+            ),
+            default=MediaResolution.LOW,
+        )
 
     class OptionsWithGoogleSearch(Options):
         google_search: Optional[bool] = Field(
@@ -330,12 +383,19 @@ class _SharedGemini:
             default=None,
         )
 
+    class OptionsWithThinkingLevel(OptionsWithGoogleSearch):
+        thinking_level: Optional[ThinkingLevel] = Field(
+            description="Indicates the thinking level. Can be 'low' or 'high'.",
+            default=None,
+        )
+
     def __init__(
         self,
         gemini_model_id,
         can_vision=True,
         can_google_search=False,
         can_thinking_budget=False,
+        can_thinking_level=False,
         can_schema=False,
     ):
         self.model_id = "gemini/{}".format(gemini_model_id)
@@ -347,6 +407,9 @@ class _SharedGemini:
         self.can_thinking_budget = can_thinking_budget
         if can_thinking_budget:
             self.Options = self.OptionsWithThinkingBudget
+        self.can_thinking_level = can_thinking_level
+        if can_thinking_level:
+            self.Options = self.OptionsWithThinkingLevel
         if can_vision:
             self.attachment_types = ATTACHMENT_TYPES
 
@@ -357,14 +420,7 @@ class _SharedGemini:
                 parts = []
                 for attachment in response.attachments:
                     mime_type = resolve_type(attachment)
-                    parts.append(
-                        {
-                            "inlineData": {
-                                "data": attachment.base64_content(),
-                                "mimeType": mime_type,
-                            }
-                        }
-                    )
+                    parts.append(self._build_attachment_part(attachment, mime_type))
                 if response.prompt.prompt:
                     parts.append({"text": response.prompt.prompt})
                 if response.prompt.tool_results:
@@ -419,17 +475,29 @@ class _SharedGemini:
             )
         for attachment in prompt.attachments:
             mime_type = resolve_type(attachment)
-            parts.append(
-                {
-                    "inlineData": {
-                        "data": attachment.base64_content(),
-                        "mimeType": mime_type,
-                    }
-                }
-            )
+            parts.append(self._build_attachment_part(attachment, mime_type))
 
         messages.append({"role": "user", "parts": parts})
         return messages
+
+
+    def _build_attachment_part(self, attachment, mime_type):
+        """Build the appropriate part for an attachment based on its type"""
+        if mime_type == "video/youtube":
+            return {
+                "fileData": {
+                    "mimeType": mime_type,
+                    "fileUri": attachment.url
+                }
+            }
+        else:
+            return {
+                "inlineData": {
+                    "data": attachment.base64_content(),
+                    "mimeType": mime_type,
+                }
+            }
+
 
     def build_request_body(self, prompt, conversation):
         body = {
@@ -482,6 +550,11 @@ class _SharedGemini:
                 "thinking_budget": prompt.options.thinking_budget
             }
 
+        if self.can_thinking_level and prompt.options.thinking_level is not None:
+            generation_config["thinkingConfig"] = {
+                "thinkingLevel": prompt.options.thinking_level
+            }
+
         config_map = {
             "temperature": "temperature",
             "max_output_tokens": "maxOutputTokens",
@@ -499,6 +572,23 @@ class _SharedGemini:
                 if config_value is not None:
                     generation_config[other_key] = config_value
 
+        has_youtube = any(
+               attachment.url and is_youtube_url(attachment.url)
+               for attachment in prompt.attachments
+               ) or (
+                   conversation and any(
+                       attachment.url and is_youtube_url(attachment.url)
+                       for response in conversation.responses
+                       for attachment in response.attachments
+                 )
+        )
+
+        # See https://ai.google.dev/api/generate-content#MediaResolution for mediaResolution token counts
+        if (prompt.options and prompt.options.media_resolution):
+            generation_config["mediaResolution"] = f"MEDIA_RESOLUTION_{prompt.options.media_resolution.value.upper()}"
+        elif has_youtube: # support longer videos even if no option set
+            generation_config["mediaResolution"] = "MEDIA_RESOLUTION_LOW" 
+ 
         if generation_config:
             body["generationConfig"] = generation_config
 

@@ -8,7 +8,7 @@ import pytest
 import pydantic
 from pydantic import BaseModel
 from typing import List, Optional
-from llm_gemini import cleanup_schema
+from llm_gemini import cleanup_schema, is_youtube_url
 
 nest_asyncio.apply()
 
@@ -593,12 +593,14 @@ def test_tools_with_nested_pydantic_models():
 
     class Address(BaseModel):
         """Address information"""
+
         street: str
         city: str
         zipcode: str
 
     class PersonInput(BaseModel):
         """Input for creating a person with address"""
+
         name: str
         age: int
         address: Address
@@ -608,12 +610,10 @@ def test_tools_with_nested_pydantic_models():
 
     def add_person(name: str, age: int, address: dict) -> str:
         """Add a person with their address to the database"""
-        people_db.append({
-            "name": name,
-            "age": age,
-            "address": address
-        })
-        return f"Added {name} (age {age}) living at {address['street']}, {address['city']}"
+        people_db.append({"name": name, "age": age, "address": address})
+        return (
+            f"Added {name} (age {age}) living at {address['street']}, {address['city']}"
+        )
 
     model = llm.get_model("gemini-flash-latest")
 
@@ -657,3 +657,17 @@ def test_tools_with_nested_pydantic_models():
     assert len(people_db) == 1
     assert people_db[0]["name"] == tool_call.arguments["name"]
     assert people_db[0]["age"] == tool_call.arguments["age"]
+
+
+def test_youtube_url_detection():
+    assert is_youtube_url("https://www.youtube.com/watch?v=abc123")
+    assert is_youtube_url("https://youtu.be/abc123")
+    assert is_youtube_url("https://www.youtube.com/embed/abc123")
+    assert is_youtube_url("http://www.youtube.com/watch?v=abc123")
+    assert is_youtube_url("http://youtu.be/abc123")
+    assert is_youtube_url("https://www.youtube.com/watch?v=abc123&feature=share")
+    assert not is_youtube_url("https://example.com/video.mp4")
+    assert not is_youtube_url("https://vimeo.com/123456")
+    assert not is_youtube_url("https://www.youtube.com/user/username")
+    assert not is_youtube_url("https://www.youtube.com/")
+    assert not is_youtube_url(None)

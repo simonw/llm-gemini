@@ -52,6 +52,7 @@ result = runner.invoke(cli.cli, ["models", "-q", "gemini/"])
 lines = reversed(result.output.strip().split("\n"))
 to_output = []
 NOTES = {
+    "gemini/gemini-3-pro-preview": "Gemini 3 Pro Preview",
     "gemini/gemini-flash-latest": "Latest Gemini Flash",
     "gemini/gemini-flash-lite-latest": "Latest Gemini Flash Lite",
     "gemini/gemini-2.5-flash": "Gemini 2.5 Flash",
@@ -73,6 +74,7 @@ for line in lines:
     )
 cog.out("\n".join(to_output))
 ]]] -->
+- `gemini/gemini-3-pro-preview`: Gemini 3 Pro Preview
 - `gemini/gemini-2.5-flash-lite-preview-09-2025`
 - `gemini/gemini-2.5-flash-preview-09-2025`
 - `gemini/gemini-flash-lite-latest`: Latest Gemini Flash Lite
@@ -142,6 +144,18 @@ And video:
 llm -m gemini-2.0-flash 'describe what happens' -a video.mp4
 ```
 The Gemini prompting guide includes [extensive advice](https://ai.google.dev/gemini-api/docs/file-prompting-strategies) on multi-modal prompting.
+
+### YouTube videos
+
+You can provide YouTube video URLs as attachments as well:
+
+```bash
+llm -m gemini-3-pro-preview -a 'https://www.youtube.com/watch?v=9o1_DL9uNlM' \
+  'Produce a summary with relevant URLs and code example snippets, then an accurate transcript with timestamps.'
+```
+[Example output here](https://gist.github.com/simonw/1b07aafb2bfc112b180ab68c864511cb).
+
+These will be processed with media resolution `low` by default. You can use the `-o media_resolution X` option to set that to `medium`, `high`, or `unspecified`.
 
 ### JSON output
 
