@@ -1,7 +1,6 @@
 from click.testing import CliRunner
 import llm
 from llm.cli import cli
-import nest_asyncio
 import json
 import os
 import pytest
@@ -10,7 +9,6 @@ from pydantic import BaseModel
 from typing import List, Optional
 from llm_gemini import cleanup_schema
 
-nest_asyncio.apply()
 
 GEMINI_API_KEY = os.environ.get("PYTEST_GEMINI_API_KEY", None) or "gm-..."
 
@@ -439,12 +437,7 @@ def test_recursive_schema_raises_error():
     recursive_schema = {
         "properties": {
             "value": {"type": "string"},
-            "next": {
-                "anyOf": [
-                    {"$ref": "#/$defs/Node"},
-                    {"type": "null"}
-                ]
-            }
+            "next": {"anyOf": [{"$ref": "#/$defs/Node"}, {"type": "null"}]},
         },
         "required": ["value"],
         "type": "object",
@@ -452,20 +445,16 @@ def test_recursive_schema_raises_error():
             "Node": {
                 "properties": {
                     "value": {"type": "string"},
-                    "next": {
-                        "anyOf": [
-                            {"$ref": "#/$defs/Node"},
-                            {"type": "null"}
-                        ]
-                    }
+                    "next": {"anyOf": [{"$ref": "#/$defs/Node"}, {"type": "null"}]},
                 },
                 "required": ["value"],
-                "type": "object"
+                "type": "object",
             }
-        }
+        },
     }
 
     import copy
+
     with pytest.raises(ValueError) as exc_info:
         cleanup_schema(copy.deepcopy(recursive_schema))
 
@@ -480,33 +469,31 @@ def test_indirect_recursive_schema_raises_error():
     """Test that indirect recursion (A -> B -> A) is detected and raises an error."""
     # Simulate class A with a field of type B, and class B with a field of type A
     indirect_recursive_schema = {
-        "properties": {
-            "name": {"type": "string"},
-            "b_field": {"$ref": "#/$defs/B"}
-        },
+        "properties": {"name": {"type": "string"}, "b_field": {"$ref": "#/$defs/B"}},
         "required": ["name"],
         "type": "object",
         "$defs": {
             "A": {
                 "properties": {
                     "name": {"type": "string"},
-                    "b_field": {"$ref": "#/$defs/B"}
+                    "b_field": {"$ref": "#/$defs/B"},
                 },
                 "required": ["name"],
-                "type": "object"
+                "type": "object",
             },
             "B": {
                 "properties": {
                     "id": {"type": "integer"},
-                    "a_field": {"$ref": "#/$defs/A"}
+                    "a_field": {"$ref": "#/$defs/A"},
                 },
                 "required": ["id"],
-                "type": "object"
-            }
-        }
+                "type": "object",
+            },
+        },
     }
 
     import copy
+
     with pytest.raises(ValueError) as exc_info:
         cleanup_schema(copy.deepcopy(indirect_recursive_schema))
 
@@ -525,14 +512,16 @@ def test_recursive_pydantic_model_raises_error():
     classes rather than hand-crafted JSON schemas. If Pydantic changes how it generates
     schemas in a future version, this test will catch any incompatibility.
     """
+
     class Node(BaseModel):
         value: str
-        next: Optional['Node'] = None
+        next: Optional["Node"] = None
 
     # Generate schema from Pydantic model at test time
     pydantic_schema = Node.model_json_schema()
 
     import copy
+
     with pytest.raises(ValueError) as exc_info:
         cleanup_schema(copy.deepcopy(pydantic_schema))
 
@@ -549,9 +538,10 @@ def test_indirect_recursive_pydantic_models_raise_error():
     Pydantic classes rather than hand-crafted JSON schemas. If Pydantic changes how it
     generates schemas in a future version, this test will catch any incompatibility.
     """
+
     class B(BaseModel):
         id: int
-        a_field: 'A'
+        a_field: "A"
 
     class A(BaseModel):
         name: str
@@ -561,6 +551,7 @@ def test_indirect_recursive_pydantic_models_raise_error():
     pydantic_schema = A.model_json_schema()
 
     import copy
+
     with pytest.raises(ValueError) as exc_info:
         cleanup_schema(copy.deepcopy(pydantic_schema))
 
