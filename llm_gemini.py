@@ -1,5 +1,6 @@
 import click
 import copy
+from enum import Enum
 import httpx
 import ijson
 import json
@@ -49,6 +50,7 @@ GOOGLE_SEARCH_MODELS = {
     "gemini-flash-lite-latest",
     "gemini-2.5-flash-preview-09-2025",
     "gemini-2.5-flash-lite-preview-09-2025",
+    "gemini-3-pro-preview",
 }
 
 # Older Google models used google_search_retrieval instead of google_search
@@ -80,7 +82,19 @@ THINKING_BUDGET_MODELS = {
     "gemini-2.5-flash-lite-preview-09-2025",
 }
 
+THINKING_LEVEL_MODELS = {
+    "gemini-3-pro-preview",
+}
+
 NO_VISION_MODELS = {"gemma-3-1b-it", "gemma-3n-e4b-it"}
+
+
+class ThinkingLevel(str, Enum):
+    """Allowed thinking levels for Gemini models."""
+
+    LOW = "low"
+    HIGH = "high"
+
 
 ATTACHMENT_TYPES = {
     # Text
@@ -169,9 +183,12 @@ def register_models(register):
         "gemini-flash-lite-latest",
         "gemini-2.5-flash-preview-09-2025",
         "gemini-2.5-flash-lite-preview-09-2025",
+        # 18th November 2025:
+        "gemini-3-pro-preview",
     ):
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         can_thinking_budget = model_id in THINKING_BUDGET_MODELS
+        can_thinking_level = model_id in THINKING_LEVEL_MODELS
         can_vision = model_id not in NO_VISION_MODELS
         can_schema = "flash-thinking" not in model_id and "gemma-3" not in model_id
         register(
@@ -180,6 +197,7 @@ def register_models(register):
                 can_vision=can_vision,
                 can_google_search=can_google_search,
                 can_thinking_budget=can_thinking_budget,
+                can_thinking_level=can_thinking_level,
                 can_schema=can_schema,
             ),
             AsyncGeminiPro(
@@ -187,6 +205,7 @@ def register_models(register):
                 can_vision=can_vision,
                 can_google_search=can_google_search,
                 can_thinking_budget=can_thinking_budget,
+                can_thinking_level=can_thinking_level,
                 can_schema=can_schema,
             ),
             aliases=(model_id,),
@@ -330,12 +349,19 @@ class _SharedGemini:
             default=None,
         )
 
+    class OptionsWithThinkingLevel(OptionsWithGoogleSearch):
+        thinking_level: Optional[ThinkingLevel] = Field(
+            description="Indicates the thinking level. Can be 'low' or 'high'.",
+            default=None,
+        )
+
     def __init__(
         self,
         gemini_model_id,
         can_vision=True,
         can_google_search=False,
         can_thinking_budget=False,
+        can_thinking_level=False,
         can_schema=False,
     ):
         self.model_id = "gemini/{}".format(gemini_model_id)
@@ -347,6 +373,9 @@ class _SharedGemini:
         self.can_thinking_budget = can_thinking_budget
         if can_thinking_budget:
             self.Options = self.OptionsWithThinkingBudget
+        self.can_thinking_level = can_thinking_level
+        if can_thinking_level:
+            self.Options = self.OptionsWithThinkingLevel
         if can_vision:
             self.attachment_types = ATTACHMENT_TYPES
 
@@ -480,6 +509,11 @@ class _SharedGemini:
         if self.can_thinking_budget and prompt.options.thinking_budget is not None:
             generation_config["thinking_config"] = {
                 "thinking_budget": prompt.options.thinking_budget
+            }
+
+        if self.can_thinking_level and prompt.options.thinking_level is not None:
+            generation_config["thinkingConfig"] = {
+                "thinkingLevel": prompt.options.thinking_level
             }
 
         config_map = {

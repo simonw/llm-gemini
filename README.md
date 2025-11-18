@@ -52,6 +52,7 @@ result = runner.invoke(cli.cli, ["models", "-q", "gemini/"])
 lines = reversed(result.output.strip().split("\n"))
 to_output = []
 NOTES = {
+    "gemini/gemini-3-pro-preview": "Gemini 3 Pro Preview",
     "gemini/gemini-flash-latest": "Latest Gemini Flash",
     "gemini/gemini-flash-lite-latest": "Latest Gemini Flash Lite",
     "gemini/gemini-2.5-flash": "Gemini 2.5 Flash",
@@ -73,6 +74,7 @@ for line in lines:
     )
 cog.out("\n".join(to_output))
 ]]] -->
+- `gemini/gemini-3-pro-preview`: Gemini 3 Pro Preview
 - `gemini/gemini-2.5-flash-lite-preview-09-2025`
 - `gemini/gemini-2.5-flash-preview-09-2025`
 - `gemini/gemini-flash-lite-latest`: Latest Gemini Flash Lite
