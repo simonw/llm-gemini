@@ -155,7 +155,7 @@ llm -m gemini-3-pro-preview -a 'https://www.youtube.com/watch?v=9o1_DL9uNlM' \
 ```
 [Example output here](https://gist.github.com/simonw/1b07aafb2bfc112b180ab68c864511cb).
 
-These will be processed with media resolution `LOW` by default. You can use the `-o media_resolution X` option to set that to `MEDIUM` or `HIGH`.
+These will be processed with media resolution `low` by default. You can use the `-o media_resolution X` option to set that to `medium`, `high`, or `unspecified`.
 
 ### JSON output
 
