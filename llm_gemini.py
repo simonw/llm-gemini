@@ -275,8 +275,20 @@ def cleanup_schema(schema, in_properties=False):
     return schema
 
 
-def _resolve_refs(schema, defs):
-    """Recursively resolve $ref references in schema using definitions."""
+def _resolve_refs(schema, defs, expansion_stack=None):
+    """Recursively resolve $ref references in schema using definitions.
+
+    Args:
+        schema: The schema to resolve references in
+        defs: Dictionary of definitions from $defs
+        expansion_stack: List tracking the order of definition expansions (for cycle detection)
+
+    Raises:
+        ValueError: If a recursive self-reference is detected
+    """
+    if expansion_stack is None:
+        expansion_stack = []
+
     if isinstance(schema, dict):
         if "$ref" in schema:
             # Extract the reference path (e.g., "#/$defs/Dog" -> "Dog")
@@ -284,15 +296,43 @@ def _resolve_refs(schema, defs):
             if ref_path.startswith("#/$defs/"):
                 def_name = ref_path.split("/")[-1]
                 if def_name in defs:
+                    # Check for recursive reference
+                    if def_name in expansion_stack:
+                        # Determine if this is direct or indirect recursion
+                        if expansion_stack[-1] == def_name:
+                            # Direct recursion: the definition references itself
+                            raise ValueError(
+                                f"Recursive schema detected: '{def_name}' directly references itself. "
+                                f"The Gemini API does not support recursive Pydantic models. "
+                                f"Please use a non-recursive schema structure."
+                            )
+                        else:
+                            # Indirect recursion: the class being referenced is earlier in the stack
+                            # The last item in expansion_stack is the immediate class that references def_name
+                            intermediate = expansion_stack[-1]
+                            raise ValueError(
+                                f"Recursive schema detected: '{def_name}' indirectly references itself through '{intermediate}'. "
+                                f"The Gemini API does not support recursive Pydantic models. "
+                                f"Please use a non-recursive schema structure."
+                            )
+
+                    # Add this definition to the expansion stack
+                    expansion_stack.append(def_name)
                     # Replace the $ref with the actual definition
-                    schema.update(copy.deepcopy(defs[def_name]))
+                    resolved = copy.deepcopy(defs[def_name])
+                    schema.update(resolved)
+                    # Resolve any nested refs in the newly added definition
+                    _resolve_refs(schema, defs, expansion_stack)
+                    # Remove from stack after processing
+                    expansion_stack.pop()
+                    return
 
         # Recursively resolve refs in nested structures
         for value in schema.values():
-            _resolve_refs(value, defs)
+            _resolve_refs(value, defs, expansion_stack)
     elif isinstance(schema, list):
         for item in schema:
-            _resolve_refs(item, defs)
+            _resolve_refs(item, defs, expansion_stack)
 
 
 class _SharedGemini:
