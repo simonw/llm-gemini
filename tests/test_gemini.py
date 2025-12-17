@@ -806,3 +806,110 @@ def test_youtube_url_detection():
     assert not is_youtube_url("https://www.youtube.com/user/username")
     assert not is_youtube_url("https://www.youtube.com/")
     assert not is_youtube_url(None)
+
+
+def test_gemini_3_flash_has_all_thinking_levels():
+    """Gemini 3 Flash should support minimal, low, medium, high thinking levels."""
+    import typing
+
+    model = llm.get_model("gemini-3-flash-preview")
+    options_class = model.Options
+
+    # Check that thinking_level field exists
+    assert "thinking_level" in options_class.model_fields
+
+    # Get the allowed values from the field's annotation
+    field_info = options_class.model_fields["thinking_level"]
+    # The annotation should be Optional[SomeEnum]
+    annotation = field_info.annotation
+    # Extract the enum from Optional[enum]
+    args = typing.get_args(annotation)
+    thinking_enum = args[0] if args else annotation
+
+    # Check all 4 levels are available
+    level_values = {e.value for e in thinking_enum}
+    assert level_values == {"minimal", "low", "medium", "high"}
+
+
+def test_gemini_3_pro_has_limited_thinking_levels():
+    """Gemini 3 Pro should only support low and high thinking levels."""
+    import typing
+
+    model = llm.get_model("gemini-3-pro-preview")
+    options_class = model.Options
+
+    # Check that thinking_level field exists
+    assert "thinking_level" in options_class.model_fields
+
+    # Get the allowed values from the field's annotation
+    field_info = options_class.model_fields["thinking_level"]
+    annotation = field_info.annotation
+    args = typing.get_args(annotation)
+    thinking_enum = args[0] if args else annotation
+
+    # Check only 2 levels are available
+    level_values = {e.value for e in thinking_enum}
+    assert level_values == {"low", "high"}
+
+
+def test_gemini_25_flash_has_thinking_budget_not_level():
+    """Gemini 2.5 Flash should have thinking_budget but not thinking_level."""
+    model = llm.get_model("gemini-2.5-flash")
+    options_class = model.Options
+
+    assert "thinking_budget" in options_class.model_fields
+    assert "thinking_level" not in options_class.model_fields
+
+
+def test_gemini_20_flash_has_neither_thinking_option():
+    """Gemini 2.0 Flash should have neither thinking_budget nor thinking_level."""
+    model = llm.get_model("gemini-2.0-flash")
+    options_class = model.Options
+
+    assert "thinking_budget" not in options_class.model_fields
+    assert "thinking_level" not in options_class.model_fields
+
+
+def test_thinking_level_in_request_body():
+    """Thinking level should be included in the request body when set."""
+    model = llm.get_model("gemini-3-flash-preview")
+
+    # Create a mock prompt with thinking_level option
+    class MockPrompt:
+        prompt = "test"
+        system = None
+        attachments = []
+        tools = None
+        schema = None
+        tool_results = None
+
+    mock_prompt = MockPrompt()
+    mock_prompt.options = model.Options(thinking_level="high")
+
+    body = model.build_request_body(mock_prompt, None)
+
+    assert "generationConfig" in body
+    assert "thinkingConfig" in body["generationConfig"]
+    assert body["generationConfig"]["thinkingConfig"]["thinkingLevel"] == "high"
+
+
+def test_thinking_level_not_in_request_when_not_set():
+    """Thinking level should not be in request body when not set."""
+    model = llm.get_model("gemini-3-flash-preview")
+
+    class MockPrompt:
+        prompt = "test"
+        system = None
+        attachments = []
+        tools = None
+        schema = None
+        tool_results = None
+
+    mock_prompt = MockPrompt()
+    mock_prompt.options = model.Options()
+
+    body = model.build_request_body(mock_prompt, None)
+
+    # generationConfig may or may not exist, but if it does, thinkingConfig should not be there
+    if "generationConfig" in body:
+        assert "thinkingConfig" not in body["generationConfig"]
