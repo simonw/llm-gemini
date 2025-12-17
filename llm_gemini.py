@@ -92,6 +92,14 @@ MODEL_THINKING_LEVELS = {
 
 NO_VISION_MODELS = {"gemma-3-1b-it", "gemma-3n-e4b-it"}
 
+NO_MEDIA_RESOLUTION_MODELS = {
+    "gemma-3-1b-it",
+    "gemma-3-4b-it",
+    "gemma-3-12b-it",
+    "gemma-3-27b-it",
+    "gemma-3n-e4b-it",
+}
+
 
 class MediaResolution(str, Enum):
     """Allowed media resolution values for Gemini models."""
@@ -201,6 +209,7 @@ def register_models(register):
         thinking_levels = MODEL_THINKING_LEVELS.get(model_id)
         can_vision = model_id not in NO_VISION_MODELS
         can_schema = "flash-thinking" not in model_id and "gemma-3" not in model_id
+        can_media_resolution = model_id not in NO_MEDIA_RESOLUTION_MODELS
         register(
             GeminiPro(
                 model_id,
@@ -209,6 +218,7 @@ def register_models(register):
                 can_thinking_budget=can_thinking_budget,
                 thinking_levels=thinking_levels,
                 can_schema=can_schema,
+                can_media_resolution=can_media_resolution,
             ),
             AsyncGeminiPro(
                 model_id,
@@ -217,6 +227,7 @@ def register_models(register):
                 can_thinking_budget=can_thinking_budget,
                 thinking_levels=thinking_levels,
                 can_schema=can_schema,
+                can_media_resolution=can_media_resolution,
             ),
             aliases=(model_id,),
         )
@@ -401,13 +412,6 @@ class _SharedGemini:
             ),
             default=None,
         )
-        media_resolution: Optional[MediaResolution] = Field(
-            description=(
-                "Media resolution for the input media (esp. YouTube) "
-                "- default is low, other values are medium, high, or unspecified"
-            ),
-            default=MediaResolution.LOW,
-        )
 
     def __init__(
         self,
@@ -417,6 +421,7 @@ class _SharedGemini:
         can_thinking_budget=False,
         thinking_levels=None,
         can_schema=False,
+        can_media_resolution=True,
     ):
         self.model_id = "gemini/{}".format(gemini_model_id)
         self.gemini_model_id = gemini_model_id
@@ -424,6 +429,7 @@ class _SharedGemini:
         self.supports_schema = can_schema
         self.can_thinking_budget = can_thinking_budget
         self.thinking_levels = thinking_levels
+        self.can_media_resolution = can_media_resolution
 
         # Build Options class dynamically based on capabilities
         extra_fields = {}
@@ -459,6 +465,18 @@ class _SharedGemini:
                 Field(
                     description=f"Indicates the thinking level. Can be {level_choices}.",
                     default=None,
+                ),
+            )
+
+        if can_media_resolution:
+            extra_fields["media_resolution"] = (
+                Optional[MediaResolution],
+                Field(
+                    description=(
+                        "Media resolution for the input media (esp. YouTube) "
+                        "- default is low, other values are medium, high, or unspecified"
+                    ),
+                    default=MediaResolution.LOW,
                 ),
             )
 
@@ -644,12 +662,14 @@ class _SharedGemini:
         )
 
         # See https://ai.google.dev/api/generate-content#MediaResolution for mediaResolution token counts
-        if prompt.options and prompt.options.media_resolution:
-            generation_config["mediaResolution"] = (
-                f"MEDIA_RESOLUTION_{prompt.options.media_resolution.value.upper()}"
-            )
-        elif has_youtube:  # support longer videos even if no option set
-            generation_config["mediaResolution"] = "MEDIA_RESOLUTION_LOW"
+        if self.can_media_resolution:
+            media_resolution = getattr(prompt.options, "media_resolution", None)
+            if media_resolution:
+                generation_config["mediaResolution"] = (
+                    f"MEDIA_RESOLUTION_{media_resolution.value.upper()}"
+                )
+            elif has_youtube:  # support longer videos even if no option set
+                generation_config["mediaResolution"] = "MEDIA_RESOLUTION_LOW"
 
         if generation_config:
             body["generationConfig"] = generation_config
