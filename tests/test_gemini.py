@@ -56,7 +56,9 @@ def test_prompt():
 
 # Skip async test on Python 3.14 due to httpcore cleanup incompatibility
 # https://github.com/encode/httpcore/issues - AsyncLibraryNotFoundError during __aexit__
-@pytest.mark.skipif(sys.version_info >= (3, 14), reason="httpcore async cleanup issue on 3.14")
+@pytest.mark.skipif(
+    sys.version_info >= (3, 14), reason="httpcore async cleanup issue on 3.14"
+)
 @pytest.mark.vcr
 @pytest.mark.asyncio
 async def test_prompt_async():
