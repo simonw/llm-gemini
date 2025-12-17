@@ -1,0 +1,64 @@
+interactions:
+- request:
+    body: '{"contents": [{"role": "user", "parts": [{"text": "Name for a pet pelican,
+      just the name"}]}], "safetySettings": [{"category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+      "threshold": "BLOCK_NONE"}, {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+      "threshold": "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold":
+      "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"}]}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '405'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - python-httpx/0.25.2
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:streamGenerateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/1yQTwvCMAzF7/sUJWcn7uDFq2fBg3gZHsIWZ7FrRpuBMvbdbTv2B3sI4b1fX0LK
+        IVMKKrS1rlHIw0mVQVFqSDV6bIWsBGOWgtihk5Wd3rDpAyL0iZ/gSq76wsYbl/6xWxMdG4p4yzWZ
+        GZ/QWBMKvceGLiQYdsVlI+gct53c+E32zH3atThM2SAsaP6s4IwpLw27k/OabRzeUKutzov9MX8a
+        9K/cxJsIZGP2AwAA//+8VD0PgjAQ3U38E8wssjlWuABJ+UhbEkgkTUkASQgmwsLgf7cqSIk6SNTt
+        muvde+96r/p69fNR7ZulcxovaIXk3x5ILtq7IsqCUHtkW1HkXU9EVzXlnJPKSGrs8vJ46q8NHEQ8
+        biIGdkAS7siA0xDAdDRdLZFPkImsqqvuVuWDjV3b3WGYFJ31T9Es5NtAgohyM/AZ+OwPmPKEKPX+
+        A0YhjhDGCYc4xK7pLsAconSxU7aDUabFnqWN9z7a6E9NW0tCVrW6W4oV5M6KUQyDWFUr+6ucZv5P
+        XzP8EpYxx1ryN1wAAAD//4oFAAAA//8DAOHmBKtGBQAA
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Mon, 17 Feb 2025 05:16:14 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=272
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -15,8 +15,7 @@ GEMINI_API_KEY = os.environ.get("PYTEST_GEMINI_API_KEY", None) or "gm-..."
 
 
 @pytest.mark.vcr
-@pytest.mark.asyncio
-async def test_prompt():
+def test_prompt():
     model = llm.get_model("gemini-1.5-flash-latest")
     response = model.prompt("Name for a pet pelican, just the name", key=GEMINI_API_KEY)
     assert str(response) == "Percy\n"
@@ -54,21 +53,23 @@ async def test_prompt():
     assert response.input_tokens == 9
     assert response.output_tokens == 2
 
-    # Skip async test on Python 3.14 due to httpcore cleanup incompatibility
-    # https://github.com/encode/httpcore/issues - AsyncLibraryNotFoundError during __aexit__
-    if sys.version_info < (3, 14):
-        # And try it async too
-        async_model = llm.get_async_model("gemini-1.5-flash-latest")
-        response = await async_model.prompt(
-            "Name for a pet pelican, just the name", key=GEMINI_API_KEY
-        )
-        text = await response.text()
-        assert text == "Percy\n"
+
+# Skip async test on Python 3.14 due to httpcore cleanup incompatibility
+# https://github.com/encode/httpcore/issues - AsyncLibraryNotFoundError during __aexit__
+@pytest.mark.skipif(sys.version_info >= (3, 14), reason="httpcore async cleanup issue on 3.14")
+@pytest.mark.vcr
+@pytest.mark.asyncio
+async def test_prompt_async():
+    async_model = llm.get_async_model("gemini-1.5-flash-latest")
+    response = await async_model.prompt(
+        "Name for a pet pelican, just the name", key=GEMINI_API_KEY
+    )
+    text = await response.text()
+    assert text == "Percy\n"
 
 
 @pytest.mark.vcr
-@pytest.mark.asyncio
-async def test_prompt_with_pydantic_schema():
+def test_prompt_with_pydantic_schema():
     class Dog(pydantic.BaseModel):
         name: str
         age: int
@@ -116,8 +117,7 @@ async def test_prompt_with_pydantic_schema():
 
 
 @pytest.mark.vcr
-@pytest.mark.asyncio
-async def test_prompt_with_multiple_dogs():
+def test_prompt_with_multiple_dogs():
     class Dog(pydantic.BaseModel):
         name: str
         age: int
