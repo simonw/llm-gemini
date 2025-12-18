@@ -476,7 +476,7 @@ class _SharedGemini:
                         "Media resolution for the input media (esp. YouTube) "
                         "- default is low, other values are medium, high, or unspecified"
                     ),
-                    default=MediaResolution.LOW,
+                    default=None,
                 ),
             )
 
@@ -664,12 +664,10 @@ class _SharedGemini:
         # See https://ai.google.dev/api/generate-content#MediaResolution for mediaResolution token counts
         if self.can_media_resolution:
             media_resolution = getattr(prompt.options, "media_resolution", None)
-            if media_resolution:
+            if media_resolution is not None:
                 generation_config["mediaResolution"] = (
                     f"MEDIA_RESOLUTION_{media_resolution.value.upper()}"
                 )
-            elif has_youtube:  # support longer videos even if no option set
-                generation_config["mediaResolution"] = "MEDIA_RESOLUTION_LOW"
 
         if generation_config:
             body["generationConfig"] = generation_config
