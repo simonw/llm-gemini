@@ -1,0 +1,123 @@
+interactions:
+- request:
+    body: '{"contents":[{"role":"user","parts":[{"text":"What is 5 times 3?"}]}],"safetySettings":[{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}],"tools":[{"functionDeclarations":[{"name":"multiply","description":"Multiply
+      two numbers.","parameters":{"properties":{"x":{"type":"integer"},"y":{"type":"integer"}},"required":["x","y"],"type":"object"}}]}]}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '572'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - python-httpx/0.28.1
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:streamGenerateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/2xTXXOiMBR951c4vFpHFETdmX0ABBULYnHVtrMPQVKMDYklQaGd/veNWlvplgcG
+        zjn3I/eePL5JtZq8BiRGMeCQyb9qjwKp1d5O7yNHCYeEC+ICCXAHMv6lPT9vV99C8pSTNUeUWADj
+        SvAHT0AKBS6nOeZoh0v55rsCZAn7IVIwpYDV73qBFwLvfIPfK//v1SiZb2iebHiIEgJ4np06srli
+        Wpyaxup23CYHz9RSmpar+bY+UaeBfRsMUMd70SOj8zDK0WTh9NO+lpRFXH+NsVVnXZUsi1HRGqfE
+        6B+Cu2GLTTxjb/thBykmfFIWhReqrZmtBVHkHnotHnKqTC2rbrjxyFFQt1Dz0YuZb/utxAwOaalm
+        G2Pm1XvPRQoczYGuku3HVrIdj7fDbmYmlt3bTwf9IeZNVqrLYEKbze00f7bvPCVbDI1g59Fk5fNZ
+        5C7/zHqa3gcYPPh6dxPduz647axCf80ilmt5pGhmGzjBWvddHLft5aQJyb0TEJB5/oFGAxYyjl9z
+        r0zmo9lvWfpp0n+/pixnFJ/3TGOIL/LPNciIxPC4NkW6pDgFyzkDCfQgB8KW4NMF8i6j6Y7P6TMk
+        Fs1PttSVc7IrF1f4lv7Bc8oBrlJK7+a/vGwgqiJ8be8r54tjAIz40YHy3F7Nr2wrClTaupxVuhrJ
+        xXDVFtW29DGT85gWMGPi6hxrJDBFBDXUxhMGbNPYZXCP4OFUVc4g21HC4Dg+KvWV64AYqYE7LRrM
+        CBJXDfUZk6V36R8AAAD//9Lh5aJZPi9JrQBpUqI4JaQB/VmcEZSaWAzxeXCIf4DSaDqhZzoBAAAA
+        //+KBQAAAP//AwCBjQ68DwYAAA==
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Fri, 19 Dec 2025 15:44:42 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=822
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+- request:
+    body: '{"contents":[{"role":"user","parts":[{"text":"What is 5 times 3?"}]},{"role":"model","parts":[{"text":""},{"function_call":{"name":"multiply","args":{"y":3,"x":5}},"thoughtSignature":"Et0BCtoBAXLI2nwMB4momyXTj+K3OPELPDi5Mq6bA5ZHuiKVF9m94gyxd+zdlC+s73nWxHx1ImnA9wPRG1sKMAvENS5i0Bef0VxMS31QE4PbbJw81tSto0OCC+AJdHF0i7x3uHqBuj91gBPwmy3rhAQM+8kxmaF4FeJ0rvICgjIIjG7rBgCE8vOD9Glt/sy3WPKo//jOukERM0rVGAPpMogXNtQbJWUQ8469alaZN67hbYJNaL5XSNcsbsu4ub04B2aFPc6NJld2EWK/enYFPnarMNwobDsSstlzuMygTHQ="}]},{"role":"user","parts":[{"function_response":{"name":"multiply","response":{"output":"15"}}}]}],"safetySettings":[{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}],"tools":[{"functionDeclarations":[{"name":"multiply","description":"Multiply
+      two numbers.","parameters":{"properties":{"x":{"type":"integer"},"y":{"type":"integer"}},"required":["x","y"],"type":"object"}}]}]}'
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      content-length:
+      - '1087'
+      content-type:
+      - application/json
+      host:
+      - generativelanguage.googleapis.com
+      user-agent:
+      - python-httpx/0.28.1
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:streamGenerateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/2SQX0/DIBTF3/kUhOc1MamazTf/zETjkj00alyWhZS7DUehwp3ONP3uAl03GnkA
+        cs+5B3530RBKWcm1kIIjOHZDF75CaRP3oBmNoNELfckXa27x7O1Wk9y9BeEQmtgVRVmBozlL9PZ0
+        X47OqdYoCC2VEaB6e9sbmNQCDl6/IH1EbGZ7xzcwA+SegJ/+yWprqhoLswN9b/aRYDzpwhLggX55
+        lNEgVwNlko/+pboH/6ZU6RySEXkIriT+BqBi+l6wBBSHn+pJ47kkR+ZuDK9gnTQ6pGygklpmebZW
+        3G2z2sK3hJ+Yyyy42mgHTyI4r/XzI/+Y371Y+fY5K+e79eprfFsy0pI/AAAA///S4eWieZQrZBYr
+        GJrqDYEIt8Qd4RbDJMIBAAAA//+iR4RTHNNpQH8WZwSlJhZDfB4c4h+gRMV0YGhkSG5CMDQ2oFlK
+        ADqLnkkBAAAA//+KBQAAAP//AwCdQVW27gUAAA==
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Fri, 19 Dec 2025 15:44:42 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=676
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

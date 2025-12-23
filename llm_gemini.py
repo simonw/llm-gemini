@@ -520,17 +520,17 @@ class _SharedGemini:
                 model_parts.append({"text": response_text})
                 tool_calls = response.tool_calls_or_raise()
                 if tool_calls:
-                    model_parts.extend(
-                        [
-                            {
-                                "function_call": {
-                                    "name": tool_call.name,
-                                    "args": tool_call.arguments,
-                                }
+                    for tool_call in tool_calls:
+                        fc_part = {
+                            "function_call": {
+                                "name": tool_call.name,
+                                "args": tool_call.arguments,
                             }
-                            for tool_call in tool_calls
-                        ]
-                    )
+                        }
+                        # Include thought signature if present (required for Gemini 3 models)
+                        if hasattr(tool_call, "thought_signature"):
+                            fc_part["thoughtSignature"] = tool_call.thought_signature
+                        model_parts.append(fc_part)
                 messages.append({"role": "model", "parts": model_parts})
 
         parts = []
@@ -676,12 +676,14 @@ class _SharedGemini:
 
     def process_part(self, part, response):
         if "functionCall" in part:
-            response.add_tool_call(
-                llm.ToolCall(
-                    name=part["functionCall"]["name"],
-                    arguments=part["functionCall"]["args"],
-                )
+            tool_call = llm.ToolCall(
+                name=part["functionCall"]["name"],
+                arguments=part["functionCall"]["args"],
             )
+            # Store thought signature if present (required for Gemini 3 models)
+            if "thoughtSignature" in part:
+                tool_call.thought_signature = part["thoughtSignature"]
+            response.add_tool_call(tool_call)
         if "text" in part:
             return part["text"]
         elif "executableCode" in part:

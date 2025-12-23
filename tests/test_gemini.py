@@ -915,3 +915,34 @@ def test_thinking_level_not_in_request_when_not_set():
     # generationConfig may or may not exist, but if it does, thinkingConfig should not be there
     if "generationConfig" in body:
         assert "thinkingConfig" not in body["generationConfig"]
+
+
+@pytest.mark.vcr
+def test_tools_with_gemini_3_thought_signatures():
+    """Test that tools work with Gemini 3 models which require thought signatures.
+
+    Gemini 3 models return thoughtSignature with function calls, and these must be
+    included when sending function responses back to the model.
+    """
+    model = llm.get_model("gemini-3-flash-preview")
+
+    def multiply(x: int, y: int) -> int:
+        """Multiply two numbers."""
+        return x * y
+
+    chain_response = model.chain(
+        "What is 5 times 3?",
+        tools=[
+            llm.Tool.function(multiply, name="multiply"),
+        ],
+        key=GEMINI_API_KEY,
+    )
+    text = chain_response.text()
+
+    # Verify the tool was called and the response mentions the result
+    assert len(chain_response._responses) >= 2
+    first_response = chain_response._responses[0]
+    assert len(first_response.tool_calls()) == 1
+    assert first_response.tool_calls()[0].name == "multiply"
+    # The result should be 15
+    assert "15" in text
