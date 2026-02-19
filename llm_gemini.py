@@ -53,6 +53,8 @@ GOOGLE_SEARCH_MODELS = {
     "gemini-2.5-flash-lite-preview-09-2025",
     "gemini-3-pro-preview",
     "gemini-3-flash-preview",
+    "gemini-3.1-pro-preview",
+    "gemini-3.1-pro-preview-customtools",
 }
 
 # Older Google models used google_search_retrieval instead of google_search
@@ -88,6 +90,8 @@ THINKING_BUDGET_MODELS = {
 MODEL_THINKING_LEVELS = {
     "gemini-3-flash-preview": ["minimal", "low", "medium", "high"],
     "gemini-3-pro-preview": ["low", "high"],
+    "gemini-3.1-pro-preview": ["low", "medium", "high"],
+    "gemini-3.1-pro-preview-customtools": ["low", "medium", "high"],
 }
 
 NO_VISION_MODELS = {"gemma-3-1b-it", "gemma-3n-e4b-it"}
@@ -107,6 +111,7 @@ class MediaResolution(str, Enum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
+    ULTRA_HIGH = "ultra_high"
     UNSPECIFIED = "unspecified"
 
 
@@ -203,6 +208,9 @@ def register_models(register):
         "gemini-3-pro-preview",
         # 17th December 2025:
         "gemini-3-flash-preview",
+        # 19th February 2026
+        "gemini-3.1-pro-preview",
+        "gemini-3.1-pro-preview-customtools",
     ):
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         can_thinking_budget = model_id in THINKING_BUDGET_MODELS
