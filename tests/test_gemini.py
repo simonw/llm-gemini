@@ -10,7 +10,6 @@ import sys
 from typing import List, Optional
 from llm_gemini import cleanup_schema, is_youtube_url
 
-
 GEMINI_API_KEY = os.environ.get("PYTEST_GEMINI_API_KEY", None) or "gm-..."
 
 
