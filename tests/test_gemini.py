@@ -169,6 +169,73 @@ def test_embedding(model_id, monkeypatch):
     assert len(response) == expected_length
 
 
+def test_gemini_embedding_001_registered():
+    """gemini-embedding-001 and its truncated variants should be registered."""
+    model = llm.get_embedding_model("gemini-embedding-001")
+    assert model.model_id == "gemini-embedding-001"
+    # Check truncated variants
+    for size in (768, 1536):
+        variant = llm.get_embedding_model(f"gemini-embedding-001-{size}")
+        assert variant.model_id == f"gemini-embedding-001-{size}"
+        assert variant.truncate == size
+
+
+def test_gemini_embedding_2_preview_registered():
+    """gemini-embedding-2-preview and its truncated variants should be registered."""
+    model = llm.get_embedding_model("gemini-embedding-2-preview")
+    assert model.model_id == "gemini-embedding-2-preview"
+    assert model.supports_binary is True
+    # Check truncated variants
+    for size in (768, 1536):
+        variant = llm.get_embedding_model(f"gemini-embedding-2-preview-{size}")
+        assert variant.model_id == f"gemini-embedding-2-preview-{size}"
+        assert variant.truncate == size
+        assert variant.supports_binary is True
+
+
+def test_gemini_embedding_001_is_text_only():
+    """gemini-embedding-001 should not support binary content."""
+    model = llm.get_embedding_model("gemini-embedding-001")
+    assert model.supports_binary is False
+    assert model.supports_text is True
+
+
+@pytest.mark.vcr
+@pytest.mark.parametrize(
+    "model_id",
+    (
+        "gemini-embedding-001",
+        "gemini-embedding-001-768",
+    ),
+)
+def test_embedding_001(model_id, monkeypatch):
+    monkeypatch.setenv("LLM_GEMINI_KEY", GEMINI_API_KEY)
+    model = llm.get_embedding_model(model_id)
+    response = model.embed("Some text goes here")
+    expected_length = 3072
+    if model_id.endswith("-768"):
+        expected_length = 768
+    assert len(response) == expected_length
+
+
+@pytest.mark.vcr
+@pytest.mark.parametrize(
+    "model_id",
+    (
+        "gemini-embedding-2-preview",
+        "gemini-embedding-2-preview-768",
+    ),
+)
+def test_embedding_2_preview(model_id, monkeypatch):
+    monkeypatch.setenv("LLM_GEMINI_KEY", GEMINI_API_KEY)
+    model = llm.get_embedding_model(model_id)
+    response = model.embed("Some text goes here")
+    expected_length = 3072
+    if model_id.endswith("-768"):
+        expected_length = 768
+    assert len(response) == expected_length
+
+
 @pytest.mark.parametrize(
     "schema,expected",
     [

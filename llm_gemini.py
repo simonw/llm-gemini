@@ -816,6 +816,33 @@ def register_embedding_models(register):
                 f"gemini-embedding-exp-03-07-{i}", f"gemini-embedding-exp-03-07", i
             ),
         )
+    # gemini-embedding-001 (text-only) in recommended truncation sizes
+    register(
+        GeminiEmbeddingModel("gemini-embedding-001", "gemini-embedding-001"),
+    )
+    for i in (768, 1536):
+        register(
+            GeminiEmbeddingModel(
+                f"gemini-embedding-001-{i}", "gemini-embedding-001", i
+            ),
+        )
+    # gemini-embedding-2-preview (multimodal) in recommended truncation sizes
+    register(
+        GeminiEmbeddingModel(
+            "gemini-embedding-2-preview",
+            "gemini-embedding-2-preview",
+            supports_binary=True,
+        ),
+    )
+    for i in (768, 1536):
+        register(
+            GeminiEmbeddingModel(
+                f"gemini-embedding-2-preview-{i}",
+                "gemini-embedding-2-preview",
+                i,
+                supports_binary=True,
+            ),
+        )
 
 
 class GeminiEmbeddingModel(llm.EmbeddingModel):
@@ -823,10 +850,25 @@ class GeminiEmbeddingModel(llm.EmbeddingModel):
     key_env_var = "LLM_GEMINI_KEY"
     batch_size = 20
 
-    def __init__(self, model_id, gemini_model_id, truncate=None):
+    def __init__(self, model_id, gemini_model_id, truncate=None, supports_binary=False):
         self.model_id = model_id
         self.gemini_model_id = gemini_model_id
         self.truncate = truncate
+        self.supports_binary = supports_binary
+
+    def _item_to_parts(self, item):
+        import base64
+
+        if isinstance(item, bytes):
+            return [
+                {
+                    "inline_data": {
+                        "data": base64.b64encode(item).decode("ascii"),
+                        "mime_type": "application/octet-stream",
+                    }
+                }
+            ]
+        return [{"text": item}]
 
     def embed_batch(self, items):
         headers = {
@@ -837,7 +879,7 @@ class GeminiEmbeddingModel(llm.EmbeddingModel):
             "requests": [
                 {
                     "model": "models/" + self.gemini_model_id,
-                    "content": {"parts": [{"text": item}]},
+                    "content": {"parts": self._item_to_parts(item)},
                 }
                 for item in items
             ]
