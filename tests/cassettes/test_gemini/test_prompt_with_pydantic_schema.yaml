@@ -68,4 +68,64 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"contents":[{"role":"user","parts":[{"text":"Invent a cool dog"}]}],"safetySettings":[{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}],"generationConfig":{"response_mime_type":"application/json","response_schema":{"properties":{"name":{"title":"Name","type":"string"},"age":{"title":"Age","type":"integer"},"bio":{"title":"Bio","type":"string"}},"required":["name","age","bio"],"type":"object"}}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '624'
+      Content-Type:
+      - application/json
+      Host:
+      - generativelanguage.googleapis.com
+      User-Agent:
+      - python-httpx/0.28.1
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/2RR0WrCMBR971eE+2zHKNQ539TtYbCBDBkDO0Y0VxtMc7sk3SzFf19arcYtD+Fy
+        z8m955wsm4gxWHMtpOAOLYzZ0ncYa7q7xUg71M4Dfcs3S27chXs8TVB7isN9+wiaDDQvMINxBq+0
+        3qHLYJAB37at1FcrSQHIpGWcpXGN3MSkBJuSEWjYjJSSyHaafjTbkGG5J1baK9c14yuppKshUHA4
+        1x+Di25DCltRBQlUPf3QE0BqgXuP30b9iO4xVNbLfUHHfUb8nASUhorSLWiHekZVl1F6nBUkegUn
+        dyfckePqGkpHg39j7YNfKlUYdfAL3gXvfHtHi8f3BQRO3ZWq3mkUBAIup2qbuz8Kk2F0iuSY0hsa
+        K0m3O7ZYSC3j5CaNN4rbvNsHBm1J2uKTaDlxmXxz/Kyf09kwtpM53X/NR5MRRIfoFwAA///c0r0O
+        gjAQAODdxHe4sLAQYmTwFdw06uhSykEvQEt6R3Tx3b3i7GR0cL2299evWK++rg0kwKB0PHi8gUSy
+        vXoSMB4MS/DEjnwHk7FYwh5zXk66hQ9YZ8ZJZ9VYk+J4nzAKtJG4RgRrxDqMBdSzLPwkzqipOO0n
+        uWVPbZvSB70wBFbMgiMXMJo+hR2NIA61NepcHaILocmT4qDPLJkBWFu3bqmva7VzKurJY3nNHh/r
+        1tZ0/BMafn3n+XI4Zr+zv9u+tV9tqj+3/wQAAP//igUAAAD//wMAm7Gk32kFAAA=
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 10 Mar 2026 04:28:44 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=1776
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
 version: 1

@@ -79,4 +79,67 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"contents":[{"role":"user","parts":[{"text":"Invent 3 cool dogs"}]}],"safetySettings":[{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}],"generationConfig":{"response_mime_type":"application/json","response_schema":{"properties":{"dogs":{"items":{"properties":{"name":{"title":"Name","type":"string"},"age":{"title":"Age","type":"integer"},"bio":{"title":"Bio","type":"string"}},"required":["name","age","bio"],"title":"Dog","type":"object"},"title":"Dogs","type":"array"}},"required":["dogs"],"type":"object"}}}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '739'
+      Content-Type:
+      - application/json
+      Host:
+      - generativelanguage.googleapis.com
+      User-Agent:
+      - python-httpx/0.28.1
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/1RRwU7DMAy99yuinLcJioYQN8Q4IG0IpAohKELeYtqwNimJWzZV+3eSdt3SHqon
+        vxfb7/mjjRjjG1BCCiC0/JZ9uApjbff3nFaEihwxlFyxAkNnbf+1AXYSwp1/xNuUC53Z1KsdVlCi
+        xylfwS7lEwcg6ypzj9dS9+wdy3QhUDGDZCQ2aNifpJyBYiAat1BtdG2ZraSRNGNL3aBludxKlTmN
+        YJscrMf2t5bGYGF5sN7hhD8nZ1NGF+g3LrXAYpAfBgGXSuDO8RfR0KJ7zGvrDKyQwAUIp5h4ZXRZ
+        UaK3qO513QV43fcK4h7RV/GRJ01QjKh4PrwN2tqFGyqL8A7BiZwLKCTtvaPk4S3hgVMabTU4jYJA
+        OOW6znIabxhf3kTHSPqUXtFYqZWfkWEplZzGs/n0uwCbd/O4QVtpZfFReM3Xe9zAeg8LWG5/Vptn
+        elon8sWd5hD9AwAA///c07EKAjEMBuBd8B2Ci0s5DnVw9hVcXVKbs8XaStN6dPDdTW87wVEQ54Sf
+        wP9FLRdfp6hAlwzoR6zcXJUUGIaYAAVbNKDJ+wqp6O60eiqYaT3IDGdeN29e7x7rULyk4MUTXEMc
+        w5Ruxa4L50TGaclnac5l9yAIkamDo6U1ywk35CybmGEQas2udaZ9QE6EmSfVLap1/vuY9/1HzNt+
+        9+eYXwAAAP//3NRhCoMwDAXgq+QEA4WBF/AC3qDYWqo1KY1Fdvs9xT/K9lfGLpAm5XvvDszEeynq
+        IklpNd5DzAe3nfTT6+S2ubjFhNAjGTGip4+SBTRsQjLsLfyglkdBZqJAJRs8GJi0MKjPB0yzEdaS
+        Uw5b78K5x3XIgXWzM4wYWPxeWBxUK/lcfp9wVTffDT/rPzf8BgAA//+iRxpOS1MAslKLMvOLQEk3
+        tpbiRAEsOjOLM4JSE4shgRAc4h+gRMckg6cONx72dTgAAAD//4oFAAAA//8DACKZLuxOCgAA
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 10 Mar 2026 04:28:46 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=1538
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
 version: 1

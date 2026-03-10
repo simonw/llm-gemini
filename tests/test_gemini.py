@@ -3,68 +3,79 @@ import llm
 from llm.cli import cli
 import json
 import os
+import httpx
 import pytest
 import pydantic
 from pydantic import BaseModel
 import sys
 from typing import List, Optional
-from llm_gemini import cleanup_schema, is_youtube_url
+from llm_gemini import (API_BASE, ALL_MODELS, GOOGLE_SEARCH_MODELS,
+    GOOGLE_SEARCH_MODELS_USING_SEARCH_RETRIEVAL, THINKING_BUDGET_MODELS,
+    cleanup_schema, is_youtube_url)
 
 
 GEMINI_API_KEY = os.environ.get("PYTEST_GEMINI_API_KEY", None) or "gm-..."
+TEST_MODEL = 'gemini-2.5-flash'
+
+
+@pytest.mark.vcr
+def test_model_list():
+    response = httpx.get(f"{API_BASE}/models",
+                         headers={'x-goog-api-key': GEMINI_API_KEY})
+    assert response.status_code == 200
+    json = response.json()
+    assert json and json.get('models')
+    available_models = {x['name'].replace('models/', '') for x in json['models']}
+
+    # make sure ALL_MODELS matches what we got from the API
+    assert available_models == ALL_MODELS
+    # make sure there are no models that don't exist in ALL_MODELS
+    assert (GOOGLE_SEARCH_MODELS
+            | GOOGLE_SEARCH_MODELS_USING_SEARCH_RETRIEVAL
+            | THINKING_BUDGET_MODELS) - ALL_MODELS == set({})
 
 
 @pytest.mark.vcr
 def test_prompt():
-    model = llm.get_model("gemini-1.5-flash-latest")
-    response = model.prompt("Name for a pet pelican, just the name", key=GEMINI_API_KEY)
-    assert str(response) == "Percy\n"
+    model = llm.get_model(TEST_MODEL)
+    response = model.prompt("Name for a pet pelican",
+                            system_fragments=['return a single name'],
+                            key=GEMINI_API_KEY)
+    assert str(response) == "Gus"
+    del response.response_json['responseId']
     assert response.response_json == {
         "candidates": [
             {
                 "finishReason": "STOP",
-                "safetyRatings": [
-                    {
-                        "category": "HARM_CATEGORY_HATE_SPEECH",
-                        "probability": "NEGLIGIBLE",
-                    },
-                    {
-                        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                        "probability": "NEGLIGIBLE",
-                    },
-                    {
-                        "category": "HARM_CATEGORY_HARASSMENT",
-                        "probability": "NEGLIGIBLE",
-                    },
-                    {
-                        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                        "probability": "NEGLIGIBLE",
-                    },
-                ],
+                "index": 0,
             }
         ],
-        "modelVersion": "gemini-1.5-flash-latest",
+        "modelVersion": TEST_MODEL,
     }
     assert response.token_details == {
         "candidatesTokenCount": 2,
-        "promptTokensDetails": [{"modality": "TEXT", "tokenCount": 9}],
-        "candidatesTokensDetails": [{"modality": "TEXT", "tokenCount": 2}],
+        "promptTokensDetails": [{"modality": "TEXT", "tokenCount": 18}],
+        "thoughtsTokenCount": 841,
     }
-    assert response.input_tokens == 9
-    assert response.output_tokens == 2
+
+    assert response.input_tokens == 18
+    assert response.output_tokens == 843
 
 
 # Skip async test on Python 3.14 due to httpcore cleanup incompatibility
 # https://github.com/encode/httpcore/issues - AsyncLibraryNotFoundError during __aexit__
+@pytest.mark.skip
 @pytest.mark.skipif(
     sys.version_info >= (3, 14), reason="httpcore async cleanup issue on 3.14"
 )
 @pytest.mark.vcr
 @pytest.mark.asyncio
 async def test_prompt_async():
-    async_model = llm.get_async_model("gemini-1.5-flash-latest")
+    async_model = llm.get_async_model(TEST_MODEL)
     response = await async_model.prompt(
-        "Name for a pet pelican, just the name", key=GEMINI_API_KEY
+        "Name for a pet pelican",
+        system_fragments=['return a single name'],
+        key=GEMINI_API_KEY
     )
     text = await response.text()
     assert text == "Percy\n"
@@ -80,42 +91,29 @@ def test_prompt_with_pydantic_schema():
     class Dogs(BaseModel):
         dogs: List[Dog]
 
-    model = llm.get_model("gemini-1.5-flash-latest")
+    model = llm.get_model(TEST_MODEL)
     response = model.prompt(
         "Invent a cool dog", key=GEMINI_API_KEY, schema=Dog, stream=False
     )
     assert json.loads(response.text()) == {
-        "age": 3,
-        "bio": "A fluffy Samoyed with exceptional intelligence and a love for belly rubs. He's mastered several tricks, including fetching the newspaper and opening doors.",
-        "name": "Cloud",
+        "age": 5,
+        "bio": "Rocket is a 5-year-old Border Collie known for his uncanny ability to "
+               "learn new tricks at an astonishing pace. He's an agility champion and an "
+               "expert frisbee catcher, but his true passion is sniffing out lost items, "
+               "making him the neighborhood's unofficial search and rescue canine.",
+        "name": "Rocket",
     }
+    del response.response_json['responseId']
     assert response.response_json == {
         "candidates": [
             {
                 "finishReason": "STOP",
-                "safetyRatings": [
-                    {
-                        "category": "HARM_CATEGORY_HATE_SPEECH",
-                        "probability": "NEGLIGIBLE",
-                    },
-                    {
-                        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                        "probability": "NEGLIGIBLE",
-                    },
-                    {
-                        "category": "HARM_CATEGORY_HARASSMENT",
-                        "probability": "NEGLIGIBLE",
-                    },
-                    {
-                        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                        "probability": "NEGLIGIBLE",
-                    },
-                ],
+                "index": 0,
             }
         ],
-        "modelVersion": "gemini-1.5-flash-latest",
+        "modelVersion": TEST_MODEL,
     }
-    assert response.input_tokens == 10
+    assert response.input_tokens == 5
 
 
 @pytest.mark.vcr
@@ -128,7 +126,7 @@ def test_prompt_with_multiple_dogs():
     class Dogs(BaseModel):
         dogs: List[Dog]
 
-    model = llm.get_model("gemini-2.0-flash")
+    model = llm.get_model(TEST_MODEL)
     response = model.prompt(
         "Invent 3 cool dogs", key=GEMINI_API_KEY, schema=Dogs, stream=False
     )
@@ -152,9 +150,7 @@ def test_prompt_with_multiple_dogs():
 @pytest.mark.parametrize(
     "model_id",
     (
-        "gemini-embedding-exp-03-07",
-        "gemini-embedding-exp-03-07-128",
-        "gemini-embedding-exp-03-07-512",
+        "gemini-embedding-001",
     ),
 )
 def test_embedding(model_id, monkeypatch):

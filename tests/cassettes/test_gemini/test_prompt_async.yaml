@@ -61,4 +61,65 @@ interactions:
     status:
       code: 200
       message: OK
+- request:
+    body: '{"contents":[{"role":"user","parts":[{"text":"Name for a pet pelican, just
+      the name"}]}],"safetySettings":[{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '383'
+      Content-Type:
+      - application/json
+      Host:
+      - generativelanguage.googleapis.com
+      User-Agent:
+      - python-httpx/0.28.1
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/2RQwWrCQBC95yuWPQYtRrEWb9IK7cFiqbSC9jCY0WxNdpbdSbGI/95NNLqhgQ27
+        897Mm/dWx0gIuQGdqhQYnRyLla8Icaz/FUaaUbMHmpIvGrB8456/Y3D3FMZD1SSf0aIAfxwVKDQU
+        6MSWrABhkP3JlVcfr/Vax74tjudUbrI4bp7vGyITPPfKGLQy0Dpd71+d24aWcqzkC0oxb+inhiCV
+        TvHg8V7UjKibZelghzNk8GnA1bM0lgrDC9qjfqSyTiNJzsOC8Fr4oHfBmRjydusgGXX+DXZPXlbl
+        YaxB4t4H5Ip/K0+L6XIhA6/c3qsxGwWZSM6o3GXc3jHpj+6jSyznpD7QOkW6UtlhobTq9u+G3W0O
+        LqsVpUVnSDt8SSvOw7D/AzjaTuAz7brJ/Hu2fKW3qYxO0R8AAAD//9Lh5aJ52kKkC/fSnJzMstQi
+        hEhAalFyJYLrlpmXh+CFZ+YVl+QjCTilJmYjqfbLzE0qLUbipxaUlOalggSGQNIzt8ST9MzMhn3S
+        AwAAAP//okvSA6cLx6KSjFKkRBdcWpyRiZwqkdJQQCZSORaemJKSk4ok65xYAIyCPOT0m1iUg+AO
+        gWQHjFLc6c7E0GTYpzsAAAAA//+iR7oLLs3LQyqo/JNTE5ESjW9iUWYeqBSkOLmkAQOiOCMoNbEY
+        EjTBIf4BSvRMTCZGeBKTkeWwT0wAAAAA//+KBQAAAP//AwB///N2mwkAAA==
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Tue, 10 Mar 2026 04:28:41 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=6843
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
 version: 1
