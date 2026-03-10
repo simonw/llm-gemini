@@ -9,6 +9,8 @@ import re
 from pydantic import Field, create_model
 from typing import Optional
 
+API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
+
 SAFETY_SETTINGS = [
     {
         "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
@@ -28,29 +30,80 @@ SAFETY_SETTINGS = [
     },
 ]
 
-# https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/ground-gemini#supported_models_2
-GOOGLE_SEARCH_MODELS = {
-    "gemini-1.5-pro-latest",
-    "gemini-1.5-flash-latest",
-    "gemini-1.5-pro-001",
-    "gemini-1.5-flash-001",
-    "gemini-1.5-pro-002",
-    "gemini-1.5-flash-002",
-    "gemini-2.0-flash-exp",
+
+ALL_MODELS = {
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
     "gemini-2.0-flash",
-    "gemini-2.5-pro-preview-03-25",
-    "gemini-2.5-pro-exp-03-25",
-    "gemini-2.5-flash-preview-04-17",
-    "gemini-2.5-pro-preview-05-06",
-    "gemini-2.5-flash-preview-05-20",
-    "gemini-2.5-pro-preview-06-05",
+    "gemini-2.0-flash-001",
+    "gemini-2.0-flash-exp-image-generation",
+    "gemini-2.0-flash-lite-001",
+    "gemini-2.0-flash-lite",
+    "gemini-2.5-flash-preview-tts",
+    "gemini-2.5-pro-preview-tts",
+    "gemma-3-1b-it",
+    "gemma-3-4b-it",
+    "gemma-3-12b-it",
+    "gemma-3-27b-it",
+    "gemma-3n-e4b-it",
+    "gemma-3n-e2b-it",
+    "gemini-flash-latest",
+    "gemini-flash-lite-latest",
+    "gemini-pro-latest",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash-image",
+    "gemini-2.5-flash-lite-preview-09-2025",
+    "gemini-3-pro-preview",
+    "gemini-3-flash-preview",
+    "gemini-3.1-pro-preview",
+    "gemini-3.1-pro-preview-customtools",
+    "gemini-3.1-flash-lite-preview",
+    "gemini-3-pro-image-preview",
+    "nano-banana-pro-preview",
+    "gemini-3.1-flash-image-preview",
+    "gemini-robotics-er-1.5-preview",
+    "gemini-2.5-computer-use-preview-10-2025",
+    "deep-research-pro-preview-12-2025",
+    "gemini-embedding-001",
+    "aqa",
+    "imagen-4.0-generate-001",
+    "imagen-4.0-ultra-generate-001",
+    "imagen-4.0-fast-generate-001",
+    "veo-2.0-generate-001",
+    "veo-3.0-generate-001",
+    "veo-3.0-fast-generate-001",
+    "veo-3.1-generate-preview",
+    "veo-3.1-fast-generate-preview",
+    "gemini-2.5-flash-native-audio-latest",
+    "gemini-2.5-flash-native-audio-preview-09-2025",
+    "gemini-2.5-flash-native-audio-preview-12-2025",
+}
+
+
+# https://web.archive.org/web/20250205201057/https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/ground-gemini#supported-models
+GOOGLE_SEARCH_MODELS = {
+    "gemini-pro-latest",
+    #"gemini-1.5-pro-latest",
+    #"gemini-1.5-flash-latest",
+    #"gemini-1.5-pro-001",
+    #"gemini-1.5-flash-001",
+    #"gemini-1.5-pro-002",
+    #"gemini-1.5-flash-002",
+    #"gemini-2.0-flash-exp",
+    "gemini-2.0-flash",
+    #"gemini-2.5-pro-preview-03-25",
+    #"gemini-2.5-pro-exp-03-25",
+    #"gemini-2.5-flash-preview-04-17",
+    #"gemini-2.5-pro-preview-05-06",
+    #"gemini-2.5-flash-preview-05-20",
+    #"gemini-2.5-pro-preview-06-05",
     "gemini-2.5-pro",
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
     "gemini-flash-latest",
     "gemini-flash-lite-latest",
-    "gemini-2.5-flash-preview-09-2025",
-    "gemini-2.5-flash-lite-preview-09-2025",
+    #"gemini-2.5-flash-preview-09-2025",
+    #"gemini-2.5-flash-lite-preview-09-2025",
     "gemini-3-pro-preview",
     "gemini-3-flash-preview",
     "gemini-3.1-pro-preview",
@@ -59,31 +112,33 @@ GOOGLE_SEARCH_MODELS = {
 
 # Older Google models used google_search_retrieval instead of google_search
 GOOGLE_SEARCH_MODELS_USING_SEARCH_RETRIEVAL = {
-    "gemini-1.5-pro-latest",
-    "gemini-1.5-flash-latest",
-    "gemini-1.5-pro-001",
-    "gemini-1.5-flash-001",
-    "gemini-1.5-pro-002",
-    "gemini-1.5-flash-002",
-    "gemini-2.0-flash-exp",
+    "gemini-pro-latest",
+    #"gemini-1.5-pro-latest",
+    #"gemini-1.5-flash-latest",
+    #"gemini-1.5-pro-001",
+    #"gemini-1.5-flash-001",
+    #"gemini-1.5-pro-002",
+    #"gemini-1.5-flash-002",
+    #"gemini-2.0-flash-exp",
 }
 
 THINKING_BUDGET_MODELS = {
-    "gemini-2.0-flash-thinking-exp-01-21",
-    "gemini-2.0-flash-thinking-exp-1219",
-    "gemini-2.5-flash-preview-04-17",
-    "gemini-2.5-pro-exp-03-25",
-    "gemini-2.5-pro-preview-03-25",
-    "gemini-2.5-pro-preview-05-06",
-    "gemini-2.5-flash-preview-05-20",
-    "gemini-2.5-pro-preview-06-05",
+    #"gemini-2.0-flash-thinking-exp-01-21",
+    #"gemini-2.0-flash-thinking-exp-1219",
+    #"gemini-2.5-flash-preview-04-17",
+    #"gemini-2.5-pro-exp-03-25",
+    #"gemini-2.5-pro-preview-03-25",
+    #"gemini-2.5-pro-preview-05-06",
+    #"gemini-2.5-flash-preview-05-20",
+    "gemini-pro-latest",
+    #"gemini-2.5-pro-preview-06-05",
     "gemini-2.5-pro",
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
     "gemini-flash-latest",
     "gemini-flash-lite-latest",
-    "gemini-2.5-flash-preview-09-2025",
-    "gemini-2.5-flash-lite-preview-09-2025",
+    #"gemini-2.5-flash-preview-09-2025",
+    #"gemini-2.5-flash-lite-preview-09-2025",
 }
 
 # Model-specific thinking levels - models not listed here don't support thinking_level
@@ -107,7 +162,6 @@ NO_MEDIA_RESOLUTION_MODELS = {
 
 class MediaResolution(str, Enum):
     """Allowed media resolution values for Gemini models."""
-
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -155,63 +209,7 @@ ATTACHMENT_TYPES = {
 @llm.hookimpl
 def register_models(register):
     # Register both sync and async versions of each model
-    for model_id in (
-        "gemini-pro",
-        "gemini-1.5-pro-latest",
-        "gemini-1.5-flash-latest",
-        "gemini-1.5-pro-001",
-        "gemini-1.5-flash-001",
-        "gemini-1.5-pro-002",
-        "gemini-1.5-flash-002",
-        "gemini-1.5-flash-8b-latest",
-        "gemini-1.5-flash-8b-001",
-        "gemini-exp-1114",
-        "gemini-exp-1121",
-        "gemini-exp-1206",
-        "gemini-2.0-flash-exp",
-        "learnlm-1.5-pro-experimental",
-        # Gemma 3 models:
-        "gemma-3-1b-it",
-        "gemma-3-4b-it",
-        "gemma-3-12b-it",  # 12th March 2025
-        "gemma-3-27b-it",
-        "gemma-3n-e4b-it",  # 20th May 2025
-        "gemini-2.0-flash-thinking-exp-1219",
-        "gemini-2.0-flash-thinking-exp-01-21",
-        # Released 5th Feb 2025:
-        "gemini-2.0-flash",
-        "gemini-2.0-pro-exp-02-05",
-        # Released 25th Feb 2025:
-        "gemini-2.0-flash-lite",
-        # 25th March 2025:
-        "gemini-2.5-pro-exp-03-25",
-        # 4th April 2025 (paid):
-        "gemini-2.5-pro-preview-03-25",
-        # 17th April 2025:
-        "gemini-2.5-flash-preview-04-17",
-        # 6th May 2025:
-        "gemini-2.5-pro-preview-05-06",
-        # 20th May 2025:
-        "gemini-2.5-flash-preview-05-20",
-        # 5th June 2025:
-        "gemini-2.5-pro-preview-06-05",
-        "gemini-2.5-flash",
-        "gemini-2.5-pro",
-        # 22nd July 2025:
-        "gemini-2.5-flash-lite",
-        # 25th Spetember 2025:
-        "gemini-flash-latest",
-        "gemini-flash-lite-latest",
-        "gemini-2.5-flash-preview-09-2025",
-        "gemini-2.5-flash-lite-preview-09-2025",
-        # 18th November 2025:
-        "gemini-3-pro-preview",
-        # 17th December 2025:
-        "gemini-3-flash-preview",
-        # 19th February 2026
-        "gemini-3.1-pro-preview",
-        "gemini-3.1-pro-preview-customtools",
-    ):
+    for model_id in ALL_MODELS:
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         can_thinking_budget = model_id in THINKING_BUDGET_MODELS
         thinking_levels = MODEL_THINKING_LEVELS.get(model_id)
@@ -733,7 +731,7 @@ class _SharedGemini:
 
 class GeminiPro(_SharedGemini, llm.KeyModel):
     def execute(self, prompt, stream, response, conversation, key):
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model_id}:streamGenerateContent"
+        url = f"{API_BASE}/models/{self.gemini_model_id}:streamGenerateContent"
         gathered = []
         body = self.build_request_body(prompt, conversation)
 
@@ -768,7 +766,7 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
 
 class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
     async def execute(self, prompt, stream, response, conversation, key):
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model_id}:streamGenerateContent"
+        url = f"{API_BASE}/models/{self.gemini_model_id}:streamGenerateContent"
         gathered = []
         body = self.build_request_body(prompt, conversation)
 
@@ -803,19 +801,19 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
 
 @llm.hookimpl
 def register_embedding_models(register):
-    register(GeminiEmbeddingModel("text-embedding-004", "text-embedding-004"))
-    # gemini-embedding-exp-03-07 in different truncation sizes
-    register(
-        GeminiEmbeddingModel(
-            "gemini-embedding-exp-03-07", "gemini-embedding-exp-03-07"
-        ),
-    )
-    for i in (128, 256, 512, 1024, 2048):
-        register(
-            GeminiEmbeddingModel(
-                f"gemini-embedding-exp-03-07-{i}", f"gemini-embedding-exp-03-07", i
-            ),
-        )
+    register(GeminiEmbeddingModel("gemini-embedding-001", "gemini-embedding-001"))
+    ## gemini-embedding-exp-03-07 in different truncation sizes
+    #register(
+    #    GeminiEmbeddingModel(
+    #        "gemini-embedding-exp-03-07", "gemini-embedding-exp-03-07"
+    #    ),
+    #)
+    #for i in (128, 256, 512, 1024, 2048):
+    #    register(
+    #        GeminiEmbeddingModel(
+    #            f"gemini-embedding-exp-03-07-{i}", f"gemini-embedding-exp-03-07", i
+    #        ),
+    #    )
 
 
 class GeminiEmbeddingModel(llm.EmbeddingModel):
@@ -845,7 +843,7 @@ class GeminiEmbeddingModel(llm.EmbeddingModel):
 
         with httpx.Client() as client:
             response = client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model_id}:batchEmbedContents",
+                f"{API_BASE}/models/{self.gemini_model_id}:batchEmbedContents",
                 headers=headers,
                 json=data,
                 timeout=None,
@@ -885,7 +883,7 @@ def register_commands(cli):
             raise click.ClickException(
                 "You must set the LLM_GEMINI_KEY environment variable or use --key"
             )
-        url = f"https://generativelanguage.googleapis.com/v1beta/models"
+        url = f"{API_BASE}/models"
         response = httpx.get(url, headers={"x-goog-api-key": key})
         response.raise_for_status()
         models = response.json()["models"]
@@ -905,7 +903,7 @@ def register_commands(cli):
         "List of files uploaded to the Gemini API"
         key = llm.get_key(key, "gemini", "LLM_GEMINI_KEY")
         response = httpx.get(
-            f"https://generativelanguage.googleapis.com/v1beta/files?key={key}",
+            f"{API_BASE}/files?key={key}",
         )
         response.raise_for_status()
         if "files" in response.json():
