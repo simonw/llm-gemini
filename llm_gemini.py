@@ -91,9 +91,9 @@ THINKING_BUDGET_MODELS = {
 MODEL_THINKING_LEVELS = {
     "gemini-3-flash-preview": ["minimal", "low", "medium", "high"],
     "gemini-3-pro-preview": ["low", "high"],
+    "gemini-3.1-flash-lite-preview": ["minimal", "low", "medium", "high"],
     "gemini-3.1-pro-preview": ["low", "medium", "high"],
     "gemini-3.1-pro-preview-customtools": ["low", "medium", "high"],
-    "gemini-3.1-flash-lite-preview": ["minimal", "low", "medium", "high"],
 }
 
 NO_VISION_MODELS = {"gemma-3-1b-it", "gemma-3n-e4b-it"}
