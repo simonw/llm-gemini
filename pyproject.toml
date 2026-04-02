@@ -22,8 +22,12 @@ CI = "https://github.com/simonw/llm-gemini/actions"
 [project.entry-points.llm]
 gemini = "llm_gemini"
 
-[project.optional-dependencies]
-test = ["pytest", "pytest-recording", "pytest-asyncio", "cogapp"]
+[dependency-groups]
+dev = ["pytest", "pytest-recording", "pytest-asyncio", "cogapp"]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
 
 [tool.pytest.ini_options]
 asyncio_mode = "strict"

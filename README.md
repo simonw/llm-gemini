@@ -302,26 +302,21 @@ If you provide multiple methods you will see models that support any of them.
 
 ## Development
 
-To set up this plugin locally, first checkout the code. Then create a new virtual environment:
+To set up this plugin locally, first checkout the code, then run the tests with `uv`:
 ```bash
 cd llm-gemini
-python3 -m venv venv
-source venv/bin/activate
+uv run pytest
 ```
-Now install the dependencies and test dependencies:
+Run `llm` with the plugin like this:
 ```bash
-llm install -e '.[test]'
-```
-To run the tests:
-```bash
-pytest
+uv run llm models -q gemini
 ```
 
 This project uses [pytest-recording](https://github.com/kiwicom/pytest-recording) to record Gemini API responses for the tests.
 
 If you add a new test that calls the API you can capture the API response like this:
 ```bash
-PYTEST_GEMINI_API_KEY="$(llm keys get gemini)" pytest --record-mode once
+PYTEST_GEMINI_API_KEY="$(llm keys get gemini)" uv run pytest --record-mode once
 ```
 You will need to have stored a valid Gemini API key using this command first:
 ```bash
