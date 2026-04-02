@@ -215,6 +215,9 @@ def register_models(register):
         "gemini-3.1-pro-preview-customtools",
         # 3rd March 2026
         "gemini-3.1-flash-lite-preview",
+        # 2nd April 2026
+        "gemma-4-26b-a4b-it",
+        "gemma-4-31b-it",
     ):
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         can_thinking_budget = model_id in THINKING_BUDGET_MODELS
