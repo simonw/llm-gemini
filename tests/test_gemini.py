@@ -692,7 +692,7 @@ def test_resolved_model():
     model = llm.get_model("gemini-flash-latest")
     response = model.prompt("hi", key=GEMINI_API_KEY)
     response.text()
-    assert response.resolved_model == "gemini-2.5-flash-preview-09-2025"
+    assert response.resolved_model == "gemini-3-flash-preview"
 
 
 @pytest.mark.vcr
@@ -945,3 +945,49 @@ def test_tools_with_gemini_3_thought_signatures():
     assert first_response.tool_calls()[0].name == "multiply"
     # The result should be 15
     assert "15" in text
+
+
+# Phase 3: StreamEvent tests
+from llm.parts import StreamEvent, TextPart, ToolCallPart
+
+
+@pytest.mark.vcr
+def test_stream_events_text():
+    """stream_events() yields text StreamEvents."""
+    model = llm.get_model("gemini-3-flash-preview")
+    response = model.prompt("Say just hello", key=GEMINI_API_KEY)
+    events = list(response.stream_events())
+    text_events = [e for e in events if e.type == "text"]
+    assert len(text_events) > 0
+    text = "".join(e.chunk for e in text_events)
+    assert "hello" in text.lower() or "Hello" in text
+
+
+@pytest.mark.vcr
+def test_parts_text():
+    """response.parts returns TextPart for simple text response."""
+    model = llm.get_model("gemini-3-flash-preview")
+    response = model.prompt("Say just hello", key=GEMINI_API_KEY)
+    response.text()
+    parts = response.parts
+    text_parts = [p for p in parts if isinstance(p, TextPart)]
+    assert len(text_parts) >= 1
+    assert text_parts[0].text
+
+
+@pytest.mark.vcr
+def test_stream_events_tool_calls():
+    """stream_events() yields tool call StreamEvents."""
+    model = llm.get_model("gemini-3-flash-preview")
+    names = ["Percy"]
+    response = model.prompt(
+        "Generate one name for a pet pelican",
+        tools=[
+            llm.Tool.function(lambda: names.pop(0), name="pelican_name_generator"),
+        ],
+        key=GEMINI_API_KEY,
+    )
+    events = list(response.stream_events())
+    name_events = [e for e in events if e.type == "tool_call_name"]
+    assert len(name_events) >= 1, "Should have tool_call_name event"
+    assert name_events[0].chunk == "pelican_name_generator"

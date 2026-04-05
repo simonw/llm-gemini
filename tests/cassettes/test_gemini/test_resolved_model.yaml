@@ -1,39 +1,40 @@
 interactions:
 - request:
-    body: '{"contents": [{"role": "user", "parts": [{"text": "hi"}]}], "safetySettings":
-      [{"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-      {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-      {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"}, {"category":
-      "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"}]}'
+    body: '{"contents":[{"role":"user","parts":[{"text":"hi"}]}],"safetySettings":[{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}]}'
     headers:
-      accept:
+      Accept:
       - '*/*'
-      accept-encoding:
+      Accept-Encoding:
       - gzip, deflate
-      connection:
+      Connection:
       - keep-alive
-      content-length:
-      - '370'
-      content-type:
+      Content-Length:
+      - '348'
+      Content-Type:
       - application/json
-      host:
+      Host:
       - generativelanguage.googleapis.com
-      user-agent:
-      - python-httpx/0.25.2
+      User-Agent:
+      - python-httpx/0.28.1
     method: POST
     uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:streamGenerateContent
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAC/7xTwW6CQBC98xV0z9IYU9vYG8WN0iBaQKMxhqxlxE1xl8JatcZ/74Kia3pqD3LY
-        zM6bmTdv85juNV1H74RFNCICcvSsT2VG1/flWWCcCWBCAlVKJlOSiUvt8dsrsSwRsC2aUJfqYgkZ
-        3OldvkFKzeEcz2qXyRlPoGhb8QiSqvxQFSDKIthKvH7O5GQBYucRQVl8vZK6kJQoIObZrlzJ9Hqh
-        ZQa40/cmoY/HQ9NxJiEeDxzbsgNUUxvTjM/JnCZUlL0u7jh2x35x8EXLofZXzq4MQn+AsdW9CZtn
-        +n4Pu7eQ1jbdDvb6Qz+0+m7wL85TNNOqW2kQtM5JDD0QRDqVnP1YTFylIuAfwCy+Lp3aOFIqvr6C
-        H06w4IIkV8hj7dfMvC0ZaaJaS/kRpE1JpSXAY1WsHK+uVFlZq6SVT3v0+QiynHJWDIlhRRk1GvdN
-        Y5GQfGmkGXxR2Bj1ltGoN5olAcogTznLwY6KnoSzEXHb8WuPDb+f7MGyFbY/3zjSDtoPAAAA///S
-        4eWieQ5XABqu4KmQkZpToFCZX6pQAgyTSnuKs3oaMByKM4JSE4shIRMc4h+gNFoQjBYE1CsIDA1w
-        lgSGRsOtKAAAAAD//4oFAAAA//8DAKQlRsHsBwAA
+        H4sIAAAAAAAC/2RQwU7DMAy95ysqn1cJNlEhrgMJBEMgOkCaOITFtIE0qRIXhqr+O0m7bqnIIbL8
+        nu333qZlSQJbroUUnNDBRbLxnSRp+z9gRhNq8sDY8s2aWzpyh9dGtacQ7sIQXKNSBiKsO9Rvs+NG
+        axQGemUEqpHejQSQWuDO4ydsXNEPQ+N4gSsk7tXzg0aoralqys0X6qVpevXzYVfkdQKf7mEyxNUE
+        yc5n/5a6S39SqjiCKB3vgStJv8FPfvWaQ+STJppGnyyKA6g0TVHSVF92xvZ5DBE9o3XS6HCiwEpq
+        mS7SD8VdmdYWvyX+9EfBoquNdngjAjPTd0/8fXG7xPn6c7V9aO5fdPa4BtaxPwAAAP//0uHlonlS
+        UFTwyC9XANqg4KmQkZpToFCZX6pQAgysSvvBn0AscSYQc7ORkEAAAAAA///slDl2o0AARO8yKQE7
+        hsBBgxqEGoERQojOWBsjNgloltN73kzifN5zNEeoql//JwD51sP3oMEn6ZJpfv3ZH06+YUzQAKnE
+        aJQqclwTKQVWjUzJD25Ki3iOcYyDI+npDIF/dPqqMOupMnIoYvIUcuQ+ChRimz8LQXymgVC228z1
+        5Vt417PaVB6SX5mGrq4eso2Nm6VI3F1FTvS9YLKmcaN18I+zdrYz4rAkMNroKkynJSaaujsDptsa
+        fIwUHD6nZwtw7d5OdGtS7siRJI2lnITA3nNbBvHWJrCiS99CRR2iupJZwbBZordho7snZud8MdwH
+        NoikGHfDkW3CS6JpNPHAssu8tbuCGGXgWZ1A6FV3N5F4JpPDF65Z3+tfZybO+znIbx0SttJyHf6m
+        KAqfWRa7iCNR743ASRCVbTtqZz/A0628jBBmQhSyHqXINLFlv6GRT04A8YLY9LhUXvtqaN6hz008
+        MurdVrBYAv0Q88d+iztv6/LpzgFh1WtESgSYy8eVTuZjGeHSqcW0XpveZv20UOFA3t//+fXlb67H
+        6lIk41/Sg6v38eu/E37KCV8AAAD//4oFAAAA//8DAE5cGK0/CAAA
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
@@ -42,11 +43,11 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Thu, 25 Sep 2025 18:27:34 GMT
+      - Sun, 05 Apr 2026 14:34:18 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=507
+      - gfet4t7; dur=1219
       Transfer-Encoding:
       - chunked
       Vary:

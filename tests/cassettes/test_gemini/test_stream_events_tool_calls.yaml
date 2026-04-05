@@ -1,0 +1,82 @@
+interactions:
+- request:
+    body: '{"contents":[{"role":"user","parts":[{"text":"Generate one name for a pet
+      pelican"}]}],"safetySettings":[{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}],"tools":[{"functionDeclarations":[{"name":"pelican_name_generator","description":null,"parameters":{"properties":{},"type":"object"}}]}]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '518'
+      Content-Type:
+      - application/json
+      Host:
+      - generativelanguage.googleapis.com
+      User-Agent:
+      - python-httpx/0.28.1
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:streamGenerateContent
+  response:
+    body:
+      string: !!binary |
+        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
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Sun, 05 Apr 2026 14:33:50 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=2359
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

@@ -5,6 +5,7 @@ import httpx
 import ijson
 import json
 import llm
+from llm.parts import StreamEvent
 import re
 from pydantic import Field, create_model
 from typing import Optional
@@ -689,7 +690,8 @@ class _SharedGemini:
 
         return body
 
-    def process_part(self, part, response):
+    def process_part(self, part, response, part_index):
+        """Process a Gemini content part and yield StreamEvent(s)."""
         if "functionCall" in part:
             tool_call = llm.ToolCall(
                 name=part["functionCall"]["name"],
@@ -699,18 +701,50 @@ class _SharedGemini:
             if "thoughtSignature" in part:
                 tool_call.thought_signature = part["thoughtSignature"]
             response.add_tool_call(tool_call)
-        if "text" in part:
-            return part["text"]
+            yield StreamEvent(
+                type="tool_call_name",
+                chunk=part["functionCall"]["name"],
+                part_index=part_index,
+            )
+            yield StreamEvent(
+                type="tool_call_args",
+                chunk=json.dumps(part["functionCall"]["args"]),
+                part_index=part_index,
+            )
+        elif "text" in part:
+            yield StreamEvent(
+                type="text",
+                chunk=part["text"],
+                part_index=part_index,
+            )
         elif "executableCode" in part:
-            return f'```{part["executableCode"]["language"].lower()}\n{part["executableCode"]["code"].strip()}\n```\n'
+            code_text = f'```{part["executableCode"]["language"].lower()}\n{part["executableCode"]["code"].strip()}\n```\n'
+            yield StreamEvent(
+                type="tool_result",
+                chunk=code_text,
+                part_index=part_index,
+                server_executed=True,
+                tool_name="code_execution",
+            )
         elif "codeExecutionResult" in part:
-            return f'```\n{part["codeExecutionResult"]["output"].strip()}\n```\n'
-        return ""
+            result_text = f'```\n{part["codeExecutionResult"]["output"].strip()}\n```\n'
+            yield StreamEvent(
+                type="tool_result",
+                chunk=result_text,
+                part_index=part_index,
+                server_executed=True,
+                tool_name="code_execution",
+            )
 
-    def process_candidates(self, candidates, response):
+    def process_candidates(self, candidates, response, part_index_start=0):
+        """Process candidates and yield StreamEvents."""
         # We only use the first candidate
-        for part in candidates[0]["content"]["parts"]:
-            yield self.process_part(part, response)
+        part_index = part_index_start
+        for i, part in enumerate(candidates[0]["content"]["parts"]):
+            if i > 0:
+                part_index += 1
+            yield from self.process_part(part, response, part_index)
+        return part_index
 
     def set_usage(self, response):
         try:
@@ -764,12 +798,22 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
                                 event["candidates"], response
                             )
                         except KeyError:
-                            yield ""
+                            yield StreamEvent(
+                                type="text", chunk="", part_index=0
+                            )
                         gathered.append(event)
                     events.clear()
         response.response_json = gathered[-1]
         resolved_model = gathered[-1]["modelVersion"]
         response.set_resolved_model(resolved_model)
+        # Store reasoning token count for _build_parts
+        try:
+            usage = response.response_json.get("usageMetadata", {})
+            thoughts_token_count = usage.get("thoughtsTokenCount") or 0
+            if thoughts_token_count:
+                response._reasoning_token_count = thoughts_token_count
+        except (AttributeError, KeyError):
+            pass
         self.set_usage(response)
 
 
@@ -796,15 +840,25 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                             if isinstance(event, dict) and "error" in event:
                                 raise llm.ModelError(event["error"]["message"])
                             try:
-                                for chunk in self.process_candidates(
+                                for stream_event in self.process_candidates(
                                     event["candidates"], response
                                 ):
-                                    yield chunk
+                                    yield stream_event
                             except KeyError:
-                                yield ""
+                                yield StreamEvent(
+                                    type="text", chunk="", part_index=0
+                                )
                             gathered.append(event)
                         events.clear()
         response.response_json = gathered[-1]
+        # Store reasoning token count for _build_parts
+        try:
+            usage = response.response_json.get("usageMetadata", {})
+            thoughts_token_count = usage.get("thoughtsTokenCount") or 0
+            if thoughts_token_count:
+                response._reasoning_token_count = thoughts_token_count
+        except (AttributeError, KeyError):
+            pass
         self.set_usage(response)
 
 

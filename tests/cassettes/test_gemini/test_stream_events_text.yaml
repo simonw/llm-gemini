@@ -1,0 +1,62 @@
+interactions:
+- request:
+    body: '{"contents":[{"role":"user","parts":[{"text":"Say just hello"}]}],"safetySettings":[{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '360'
+      Content-Type:
+      - application/json
+      Host:
+      - generativelanguage.googleapis.com
+      User-Agent:
+      - python-httpx/0.28.1
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:streamGenerateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/2RQy2rDMBC86yvMnmNok0Kgt9IU0kegUFMKoQdhbWylsmSkdZNg/O+V7DiRqQ5i
+        2ZndnZlty5IEcq6FFJzQwX2y9Z0kafs/YEYTavLA2PLNmlu6cofXRrWnEB7DEKxRKQMR1l3q79l1
+        ozUKA70yAtVI70YCSC3w6PEbNq7oh6FxvMANEvfq+UUj1NZUNWXmB/WjaXr1d8OuyOsEvj3DZIir
+        CbKYz/4tdSt/Uqo4gigd74ErSafgJ3v6yiDySRNNo08WxQFUmqYoaapvvmTnPIaIPtE6aXQ4UWAl
+        tUwX6U5xV6a1xV+Jh/4oWHS10Q6fRWAe1m8ffLd8WYl0v9/k78qdXt1DDqxjfwAAAP//7JO7UoNA
+        AEV7Z/wJ23Vmk5BAKFLwlOcusCAmHYu8BRlgRfh6HW3SO1r5Cffcc+5vb35dhSsO10NJVXTJxIav
+        /7UhkpXBlCW6B+LbFA1Bz6UEedSHbVlojFti65jOUPH7EEAri8WyfdbHTSKa82ATHlwqNqkYTq4E
+        X5CZExkUEAiTZ29WozLOZxBe1iXuVN958OArFmviMKBDCWcu2tVMEMSwVZOnJNXcPtPWLOAwkRq5
+        yuQOeUZAgV37MuPB2JTBXkScTWbrSCmjguY6+FCrSAVs17nLYWsrZMvrCLRzHloaJ0WJ0YBHgXQj
+        jpZW4HPaxe9hhR3pdPpxIfmnA2MZZMn4bQUJsXf3389f9fMBAAD//4oFAAAA//8DABRU64NKBQAA
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Sun, 05 Apr 2026 14:33:36 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=1003
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

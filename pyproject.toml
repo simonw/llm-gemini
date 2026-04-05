@@ -25,6 +25,12 @@ gemini = "llm_gemini"
 [dependency-groups]
 dev = ["pytest", "pytest-recording", "pytest-asyncio", "cogapp"]
 
+[tool.uv]
+package = true
+
+[tool.uv.sources]
+llm = { path = "/Users/simon/Dropbox/dev/llm", editable = true }
+
 [build-system]
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
