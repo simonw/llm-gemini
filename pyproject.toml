@@ -23,7 +23,7 @@ CI = "https://github.com/simonw/llm-gemini/actions"
 gemini = "llm_gemini"
 
 [dependency-groups]
-dev = ["pytest", "pytest-recording", "pytest-asyncio", "cogapp"]
+dev = ["pytest", "pytest-recording", "pytest-asyncio", "cogapp", "inline-snapshot"]
 
 [tool.uv]
 package = true
