@@ -94,6 +94,8 @@ MODEL_THINKING_LEVELS = {
     "gemini-3.1-pro-preview": ["low", "medium", "high"],
     "gemini-3.1-pro-preview-customtools": ["low", "medium", "high"],
     "gemini-3.1-flash-lite-preview": ["minimal", "low", "medium", "high"],
+    "gemma-4-26b-a4b-it": ["minimal", "high"],
+    "gemma-4-31b-it": ["minimal", "high"],
 }
 
 NO_VISION_MODELS = {"gemma-3-1b-it", "gemma-3n-e4b-it"}
@@ -483,6 +485,15 @@ class _SharedGemini:
                 ),
             )
 
+        if can_thinking_budget or thinking_levels:
+            extra_fields["include_thoughts"] = (
+                Optional[bool],
+                Field(
+                    description="Include the model's thoughts in the output",
+                    default=None,
+                ),
+            )
+
         if can_media_resolution:
             extra_fields["media_resolution"] = (
                 Optional[MediaResolution],
@@ -647,6 +658,11 @@ class _SharedGemini:
                 thinking_level = thinking_level.value
             generation_config["thinkingConfig"] = {"thinkingLevel": thinking_level}
 
+        if getattr(prompt.options, "include_thoughts", None) is not None:
+            if "thinkingConfig" not in generation_config:
+                generation_config["thinkingConfig"] = {}
+            generation_config["thinkingConfig"]["includeThoughts"] = prompt.options.include_thoughts
+
         config_map = {
             "temperature": "temperature",
             "max_output_tokens": "maxOutputTokens",
@@ -690,6 +706,13 @@ class _SharedGemini:
         return body
 
     def process_part(self, part, response):
+        include_thoughts = getattr(response.prompt.options, "include_thoughts", None)
+        if include_thoughts is None:
+            include_thoughts = True
+
+        if part.get("thought") and not include_thoughts:
+            return ""
+
         if "functionCall" in part:
             tool_call = llm.ToolCall(
                 name=part["functionCall"]["name"],
