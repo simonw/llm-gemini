@@ -892,6 +892,7 @@ def test_thinking_level_in_request_body():
         tools = None
         schema = None
         tool_results = None
+        messages = [llm.user("test")]
 
     mock_prompt = MockPrompt()
     mock_prompt.options = model.Options(thinking_level="high")
@@ -914,6 +915,7 @@ def test_thinking_level_not_in_request_when_not_set():
         tools = None
         schema = None
         tool_results = None
+        messages = [llm.user("test")]
 
     mock_prompt = MockPrompt()
     mock_prompt.options = model.Options()

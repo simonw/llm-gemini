@@ -5,7 +5,14 @@ import httpx
 import ijson
 import json
 import llm
-from llm.parts import StreamEvent
+from llm.parts import (
+    AttachmentPart,
+    ReasoningPart,
+    StreamEvent,
+    TextPart,
+    ToolCallPart,
+    ToolResultPart,
+)
 import re
 from pydantic import Field, create_model
 from typing import Any, Dict, Optional
@@ -507,70 +514,62 @@ class _SharedGemini:
             self.attachment_types = ATTACHMENT_TYPES
 
     def build_messages(self, prompt, conversation):
-        messages = []
-        if conversation:
-            for response in conversation.responses:
-                parts = []
-                for attachment in response.attachments:
-                    mime_type = resolve_type(attachment)
-                    parts.append(self._build_attachment_part(attachment, mime_type))
-                if response.prompt.prompt:
-                    parts.append({"text": response.prompt.prompt})
-                if response.prompt.tool_results:
-                    parts.extend(
-                        [
-                            {
-                                "function_response": {
-                                    "name": tool_result.name,
-                                    "response": {
-                                        "output": tool_result.output,
-                                    },
-                                }
-                            }
-                            for tool_result in response.prompt.tool_results
-                        ]
-                    )
-                messages.append({"role": "user", "parts": parts})
-                model_parts = []
-                response_text = response.text_or_raise()
-                model_parts.append({"text": response_text})
-                tool_calls = response.tool_calls_or_raise()
-                if tool_calls:
-                    for tool_call in tool_calls:
-                        fc_part = {
-                            "function_call": {
-                                "name": tool_call.name,
-                                "args": tool_call.arguments,
-                            }
-                        }
-                        # Include thought signature if present (required for Gemini 3 models)
-                        if hasattr(tool_call, "thought_signature"):
-                            fc_part["thoughtSignature"] = tool_call.thought_signature
-                        model_parts.append(fc_part)
-                messages.append({"role": "model", "parts": model_parts})
+        """Translate prompt.messages into Gemini's wire format.
 
-        parts = []
-        if prompt.prompt:
-            parts.append({"text": prompt.prompt})
-        if prompt.tool_results:
-            parts.extend(
-                [
-                    {
-                        "function_response": {
-                            "name": tool_result.name,
-                            "response": {
-                                "output": tool_result.output,
-                            },
+        prompt.messages is the canonical input chain for this turn —
+        Conversation.prompt and response.reply pre-bake history into
+        it. The conversation parameter is unused and kept only for the
+        plugin API contract.
+        """
+        messages = []
+        for msg in prompt.messages:
+            # System messages surface as systemInstruction in the
+            # request body; skip them here.
+            if msg.role == "system":
+                continue
+            # Tool-result messages get folded into a "user" role with
+            # function_response parts (Gemini doesn't have a "tool"
+            # role).
+            gemini_role = "model" if msg.role == "assistant" else "user"
+            parts = []
+            for part in msg.parts:
+                if isinstance(part, TextPart):
+                    if part.text:
+                        parts.append({"text": part.text})
+                elif isinstance(part, ToolCallPart):
+                    fc_part = {
+                        "function_call": {
+                            "name": part.name,
+                            "args": part.arguments,
                         }
                     }
-                    for tool_result in prompt.tool_results
-                ]
-            )
-        for attachment in prompt.attachments:
-            mime_type = resolve_type(attachment)
-            parts.append(self._build_attachment_part(attachment, mime_type))
-
-        messages.append({"role": "user", "parts": parts})
+                    sig = (part.provider_metadata or {}).get(
+                        "gemini", {}
+                    ).get("thoughtSignature")
+                    if sig:
+                        fc_part["thoughtSignature"] = sig
+                    parts.append(fc_part)
+                elif isinstance(part, ToolResultPart):
+                    parts.append(
+                        {
+                            "function_response": {
+                                "name": part.name,
+                                "response": {"output": part.output},
+                            }
+                        }
+                    )
+                elif isinstance(part, AttachmentPart) and part.attachment:
+                    mime_type = resolve_type(part.attachment)
+                    parts.append(
+                        self._build_attachment_part(part.attachment, mime_type)
+                    )
+                elif isinstance(part, ReasoningPart):
+                    # Gemini doesn't accept reasoning back in input —
+                    # provider stores its own state via thoughtSignature
+                    # on tool calls instead.
+                    pass
+            if parts:
+                messages.append({"role": gemini_role, "parts": parts})
         return messages
 
     def _build_attachment_part(self, attachment, mime_type):
@@ -703,13 +702,20 @@ class _SharedGemini:
                 name=part["functionCall"]["name"],
                 arguments=part["functionCall"]["args"],
             )
-            # Store thought signature if present (required for Gemini 3 models)
-            if "thoughtSignature" in part:
-                tool_call.thought_signature = part["thoughtSignature"]
+            # Gemini 3 returns a thoughtSignature on each functionCall
+            # that must be echoed back on the next request. Stash it on
+            # the ToolCall (legacy code path) and on the StreamEvent's
+            # provider_metadata so the framework merges it onto the
+            # ToolCallPart for build_messages to read on replay.
+            sig = part.get("thoughtSignature")
+            if sig is not None:
+                tool_call.thought_signature = sig
             response.add_tool_call(tool_call)
+            pm = {"gemini": {"thoughtSignature": sig}} if sig else None
             yield StreamEvent(
                 type="tool_call_name",
                 chunk=part["functionCall"]["name"],
+                provider_metadata=pm,
             )
             yield StreamEvent(
                 type="tool_call_args",
