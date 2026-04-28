@@ -8,7 +8,7 @@ import llm
 from llm.parts import StreamEvent
 import re
 from pydantic import Field, create_model
-from typing import Optional
+from typing import Any, Dict, Optional
 
 SAFETY_SETTINGS = [
     {
@@ -633,10 +633,9 @@ class _SharedGemini:
                 }
             )
 
+        thinking_config: Dict[str, Any] = {}
         if self.can_thinking_budget and prompt.options.thinking_budget is not None:
-            generation_config["thinking_config"] = {
-                "thinking_budget": prompt.options.thinking_budget
-            }
+            thinking_config["thinkingBudget"] = prompt.options.thinking_budget
 
         if (
             self.thinking_levels
@@ -646,7 +645,14 @@ class _SharedGemini:
             thinking_level = prompt.options.thinking_level
             if hasattr(thinking_level, "value"):
                 thinking_level = thinking_level.value
-            generation_config["thinkingConfig"] = {"thinkingLevel": thinking_level}
+            thinking_config["thinkingLevel"] = thinking_level
+
+        if thinking_config:
+            # Ask the API to stream thought-summary parts so the LLM
+            # CLI can render them dimmed on stderr instead of just
+            # reporting an opaque token count.
+            thinking_config["includeThoughts"] = True
+            generation_config["thinkingConfig"] = thinking_config
 
         config_map = {
             "temperature": "temperature",
@@ -710,7 +716,13 @@ class _SharedGemini:
                 chunk=json.dumps(part["functionCall"]["args"]),
             )
         elif "text" in part:
-            yield StreamEvent(type="text", chunk=part["text"])
+            # Thought-summary parts (when includeThoughts=True) carry
+            # `thought: True`; surface them as reasoning so the CLI
+            # renders them dimmed on stderr.
+            if part.get("thought"):
+                yield StreamEvent(type="reasoning", chunk=part["text"])
+            else:
+                yield StreamEvent(type="text", chunk=part["text"])
         elif "executableCode" in part:
             code_text = f'```{part["executableCode"]["language"].lower()}\n{part["executableCode"]["code"].strip()}\n```\n'
             yield StreamEvent(
@@ -766,6 +778,7 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
         gathered = []
         body = self.build_request_body(prompt, conversation)
 
+        saw_reasoning = False
         with httpx.stream(
             "POST",
             url,
@@ -782,9 +795,12 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
                         if isinstance(event, dict) and "error" in event:
                             raise llm.ModelError(event["error"]["message"])
                         try:
-                            yield from self.process_candidates(
+                            for stream_event in self.process_candidates(
                                 event["candidates"], response
-                            )
+                            ):
+                                if stream_event.type == "reasoning":
+                                    saw_reasoning = True
+                                yield stream_event
                         except KeyError:
                             yield StreamEvent(type="text", chunk="")
                         gathered.append(event)
@@ -792,14 +808,17 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
         response.response_json = gathered[-1]
         resolved_model = gathered[-1]["modelVersion"]
         response.set_resolved_model(resolved_model)
-        # Store reasoning token count for _build_parts
-        try:
-            usage = response.response_json.get("usageMetadata", {})
-            thoughts_token_count = usage.get("thoughtsTokenCount") or 0
-            if thoughts_token_count:
-                response._reasoning_token_count = thoughts_token_count
-        except (AttributeError, KeyError):
-            pass
+        # When includeThoughts isn't set, Gemini reports only an
+        # opaque thoughtsTokenCount — emit a redacted reasoning marker
+        # so the assembled message records that thinking happened. If
+        # we already streamed visible reasoning, no marker needed.
+        if not saw_reasoning:
+            try:
+                usage = response.response_json.get("usageMetadata", {})
+                if usage.get("thoughtsTokenCount") or 0:
+                    yield StreamEvent(type="reasoning", chunk="", redacted=True)
+            except (AttributeError, KeyError):
+                pass
         self.set_usage(response)
 
 
@@ -809,6 +828,7 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
         gathered = []
         body = self.build_request_body(prompt, conversation)
 
+        saw_reasoning = False
         async with httpx.AsyncClient() as client:
             async with client.stream(
                 "POST",
@@ -829,20 +849,23 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                                 for stream_event in self.process_candidates(
                                     event["candidates"], response
                                 ):
+                                    if stream_event.type == "reasoning":
+                                        saw_reasoning = True
                                     yield stream_event
                             except KeyError:
                                 yield StreamEvent(type="text", chunk="")
                             gathered.append(event)
                         events.clear()
         response.response_json = gathered[-1]
-        # Store reasoning token count for _build_parts
-        try:
-            usage = response.response_json.get("usageMetadata", {})
-            thoughts_token_count = usage.get("thoughtsTokenCount") or 0
-            if thoughts_token_count:
-                response._reasoning_token_count = thoughts_token_count
-        except (AttributeError, KeyError):
-            pass
+        # See sync GeminiPro.execute: redacted marker only when no
+        # visible reasoning streamed.
+        if not saw_reasoning:
+            try:
+                usage = response.response_json.get("usageMetadata", {})
+                if usage.get("thoughtsTokenCount") or 0:
+                    yield StreamEvent(type="reasoning", chunk="", redacted=True)
+            except (AttributeError, KeyError):
+                pass
         self.set_usage(response)
 
 
