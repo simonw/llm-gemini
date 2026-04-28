@@ -690,7 +690,7 @@ class _SharedGemini:
 
         return body
 
-    def process_part(self, part, response, part_index):
+    def process_part(self, part, response):
         """Process a Gemini content part and yield StreamEvent(s)."""
         if "functionCall" in part:
             tool_call = llm.ToolCall(
@@ -704,25 +704,18 @@ class _SharedGemini:
             yield StreamEvent(
                 type="tool_call_name",
                 chunk=part["functionCall"]["name"],
-                part_index=part_index,
             )
             yield StreamEvent(
                 type="tool_call_args",
                 chunk=json.dumps(part["functionCall"]["args"]),
-                part_index=part_index,
             )
         elif "text" in part:
-            yield StreamEvent(
-                type="text",
-                chunk=part["text"],
-                part_index=part_index,
-            )
+            yield StreamEvent(type="text", chunk=part["text"])
         elif "executableCode" in part:
             code_text = f'```{part["executableCode"]["language"].lower()}\n{part["executableCode"]["code"].strip()}\n```\n'
             yield StreamEvent(
                 type="tool_result",
                 chunk=code_text,
-                part_index=part_index,
                 server_executed=True,
                 tool_name="code_execution",
             )
@@ -731,20 +724,15 @@ class _SharedGemini:
             yield StreamEvent(
                 type="tool_result",
                 chunk=result_text,
-                part_index=part_index,
                 server_executed=True,
                 tool_name="code_execution",
             )
 
-    def process_candidates(self, candidates, response, part_index_start=0):
+    def process_candidates(self, candidates, response):
         """Process candidates and yield StreamEvents."""
         # We only use the first candidate
-        part_index = part_index_start
-        for i, part in enumerate(candidates[0]["content"]["parts"]):
-            if i > 0:
-                part_index += 1
-            yield from self.process_part(part, response, part_index)
-        return part_index
+        for part in candidates[0]["content"]["parts"]:
+            yield from self.process_part(part, response)
 
     def set_usage(self, response):
         try:
@@ -798,9 +786,7 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
                                 event["candidates"], response
                             )
                         except KeyError:
-                            yield StreamEvent(
-                                type="text", chunk="", part_index=0
-                            )
+                            yield StreamEvent(type="text", chunk="")
                         gathered.append(event)
                     events.clear()
         response.response_json = gathered[-1]
@@ -845,9 +831,7 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                                 ):
                                     yield stream_event
                             except KeyError:
-                                yield StreamEvent(
-                                    type="text", chunk="", part_index=0
-                                )
+                                yield StreamEvent(type="text", chunk="")
                             gathered.append(event)
                         events.clear()
         response.response_json = gathered[-1]

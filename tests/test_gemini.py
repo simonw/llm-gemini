@@ -714,7 +714,9 @@ def test_tools():
         key=GEMINI_API_KEY,
     )
     text = chain_response.text()
-    assert text == snapshot("Okay, here are two names for a pet pelican: Charles and Sammy.\n")
+    assert text == snapshot(
+        "Okay, here are two names for a pet pelican: Charles and Sammy.\n"
+    )
     # This one did three
     assert len(chain_response._responses) == 3
     first, second, third = chain_response._responses
@@ -976,7 +978,7 @@ def test_parts_text():
     model = llm.get_model("gemini-3-flash-preview")
     response = model.prompt("Say just hello", key=GEMINI_API_KEY)
     response.text()
-    parts = response.parts
+    parts = [p for m in response.messages for p in m.parts]
     text_parts = [p for p in parts if isinstance(p, TextPart)]
     assert len(text_parts) >= 1
     assert text_parts[0].text
