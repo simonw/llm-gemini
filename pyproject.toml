@@ -7,7 +7,7 @@ authors = [{name = "Simon Willison"}]
 license = "Apache-2.0"
 classifiers = []
 dependencies = [
-    "llm>=0.27",
+    "llm>=0.32a0",
     "httpx",
     "ijson"
 ]
@@ -27,9 +27,6 @@ dev = ["pytest", "pytest-recording", "pytest-asyncio", "cogapp", "inline-snapsho
 
 [tool.uv]
 package = true
-
-[tool.uv.sources]
-llm = { path = "/Users/simon/Dropbox/dev/llm", editable = true }
 
 [build-system]
 requires = ["setuptools"]

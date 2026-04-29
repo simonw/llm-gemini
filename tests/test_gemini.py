@@ -980,7 +980,7 @@ def test_parts_text():
     model = llm.get_model("gemini-3-flash-preview")
     response = model.prompt("Say just hello", key=GEMINI_API_KEY)
     response.text()
-    parts = [p for m in response.messages for p in m.parts]
+    parts = [p for m in response.messages() for p in m.parts]
     text_parts = [p for p in parts if isinstance(p, TextPart)]
     assert len(text_parts) >= 1
     assert text_parts[0].text
