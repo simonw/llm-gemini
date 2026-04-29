@@ -7,7 +7,7 @@ authors = [{name = "Simon Willison"}]
 license = "Apache-2.0"
 classifiers = []
 dependencies = [
-    "llm>=0.27",
+    "llm>=0.32a0",
     "httpx",
     "ijson"
 ]
@@ -23,7 +23,10 @@ CI = "https://github.com/simonw/llm-gemini/actions"
 gemini = "llm_gemini"
 
 [dependency-groups]
-dev = ["pytest", "pytest-recording", "pytest-asyncio", "cogapp"]
+dev = ["pytest", "pytest-recording", "pytest-asyncio", "cogapp", "inline-snapshot"]
+
+[tool.uv]
+package = true
 
 [build-system]
 requires = ["setuptools"]

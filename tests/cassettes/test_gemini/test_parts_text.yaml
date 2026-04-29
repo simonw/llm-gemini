@@ -1,0 +1,65 @@
+interactions:
+- request:
+    body: '{"contents":[{"role":"user","parts":[{"text":"Say just hello"}]}],"safetySettings":[{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}]}'
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '360'
+      Content-Type:
+      - application/json
+      Host:
+      - generativelanguage.googleapis.com
+      User-Agent:
+      - python-httpx/0.28.1
+    method: POST
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:streamGenerateContent
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAC/2RQTUvEMBC951eUnLegrIp4E61YWL+wyMKyh2CnbTDN1GTqrpT+d5N2u5tiDmGY
+        92bmvbfpWBTxT6FzmQsCy2+ijetEUTf8HkNNoMkBU8s1G2HoxB1fF9SOQrD3Q/wRlEIeYP2x3i5O
+        Gw0q8PQac1ATvZ8IXOoc9g4/Y9OKYZi3VpTwBCScenHUyBuDdUMZfoG+w3ZQfzHuCrzO4PMDTEhC
+        zZCr5eLfUnvvTkoVRhCk4zwIJenX+8mSdcYDnzTTNPlkQRycKmzLiub6Lq/ZIY8xog8wVqL2J0qo
+        pZbxMi6UsFXcGPiRsBuOcgO2QW0hzT1zt169i2L1kBZtGtvbV3x+Sb7fEs569gcAAP//7JO5kptA
+        AERzV/knnOIqcQlEqOFYjgGG2yjjFBgx3OfX75adbO6yI39BV3e/9/3rl7+OwqcdPhf16idO5mX8
+        9b88PkVxDMR7yhLCusiMDVxi3BmpTk6DbYOHVjeRX76JLEvOIxbwbVJdn5GR3JomnRXdfdwhWtOY
+        BSKwAhnq/SSPFMltrE3QFNhDfRtF9UbrHdDUjQ9EUDq9usqsErzUm7qC4RjS/aYfNbMaMc9UrztR
+        ++iGKwGt87MQGDqnwtYQ8YXbjJ4Y7FjTl4NHJdGFSOIgzK2VpPzjp2WeBc9OjZeRMXIBKEkVVNcW
+        xCCEIZ+SXhNUioyXyTbCj1CkN3Jt58XRZwd2tIda+KdiSIaHy/vC9e4Fl1q0hoMUlU75yp9dhr1T
+        f9hjlyUgGKlh4TRATrXjX5oCBpYJjoaK3ImiisM7tytsUGzY5NpumeS/SQ1cNlXxSXXPAYwigdaD
+        /awjU69NCCSUwHhmkZLN/DUJaD2znJTVqPVEPxTwxzaXH7xOlVsk02+CPd9G3/67/q9cfwcAAP//
+        igUAAAD//wMADYDAKfYFAAA=
+    headers:
+      Alt-Svc:
+      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=UTF-8
+      Date:
+      - Sun, 05 Apr 2026 14:33:37 GMT
+      Server:
+      - scaffolding on HTTPServer2
+      Server-Timing:
+      - gfet4t7; dur=1199
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Origin
+      - X-Origin
+      - Referer
+      X-Content-Type-Options:
+      - nosniff
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-XSS-Protection:
+      - '0'
+    status:
+      code: 200
+      message: OK
+version: 1

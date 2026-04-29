@@ -315,7 +315,7 @@ Run `llm` with the plugin like this:
 uv run llm models -q gemini
 ```
 
-This project uses [pytest-recording](https://github.com/kiwicom/pytest-recording) to record Gemini API responses for the tests.
+This project uses [pytest-recording](https://github.com/kiwicom/pytest-recording) to record Gemini API responses for the tests, and [inline-snapshot](https://15r10nk.github.io/inline-snapshot/) for test assertions.
 
 If you add a new test that calls the API you can capture the API response like this:
 ```bash
@@ -325,4 +325,9 @@ You will need to have stored a valid Gemini API key using this command first:
 ```bash
 llm keys set gemini
 # Paste key here
+```
+To re-record all cassettes and update all inline snapshot assertions in one command:
+```bash
+rm tests/cassettes/test_gemini/*.yaml
+PYTEST_GEMINI_API_KEY="$(llm keys get gemini)" uv run pytest --record-mode all --inline-snapshot=fix
 ```

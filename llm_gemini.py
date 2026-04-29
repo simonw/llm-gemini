@@ -5,9 +5,17 @@ import httpx
 import ijson
 import json
 import llm
+from llm.parts import (
+    AttachmentPart,
+    ReasoningPart,
+    StreamEvent,
+    TextPart,
+    ToolCallPart,
+    ToolResultPart,
+)
 import re
 from pydantic import Field, create_model
-from typing import Optional
+from typing import Any, Dict, Optional
 
 SAFETY_SETTINGS = [
     {
@@ -506,70 +514,62 @@ class _SharedGemini:
             self.attachment_types = ATTACHMENT_TYPES
 
     def build_messages(self, prompt, conversation):
-        messages = []
-        if conversation:
-            for response in conversation.responses:
-                parts = []
-                for attachment in response.attachments:
-                    mime_type = resolve_type(attachment)
-                    parts.append(self._build_attachment_part(attachment, mime_type))
-                if response.prompt.prompt:
-                    parts.append({"text": response.prompt.prompt})
-                if response.prompt.tool_results:
-                    parts.extend(
-                        [
-                            {
-                                "function_response": {
-                                    "name": tool_result.name,
-                                    "response": {
-                                        "output": tool_result.output,
-                                    },
-                                }
-                            }
-                            for tool_result in response.prompt.tool_results
-                        ]
-                    )
-                messages.append({"role": "user", "parts": parts})
-                model_parts = []
-                response_text = response.text_or_raise()
-                model_parts.append({"text": response_text})
-                tool_calls = response.tool_calls_or_raise()
-                if tool_calls:
-                    for tool_call in tool_calls:
-                        fc_part = {
-                            "function_call": {
-                                "name": tool_call.name,
-                                "args": tool_call.arguments,
-                            }
-                        }
-                        # Include thought signature if present (required for Gemini 3 models)
-                        if hasattr(tool_call, "thought_signature"):
-                            fc_part["thoughtSignature"] = tool_call.thought_signature
-                        model_parts.append(fc_part)
-                messages.append({"role": "model", "parts": model_parts})
+        """Translate prompt.messages into Gemini's wire format.
 
-        parts = []
-        if prompt.prompt:
-            parts.append({"text": prompt.prompt})
-        if prompt.tool_results:
-            parts.extend(
-                [
-                    {
-                        "function_response": {
-                            "name": tool_result.name,
-                            "response": {
-                                "output": tool_result.output,
-                            },
+        prompt.messages is the canonical input chain for this turn —
+        Conversation.prompt and response.reply pre-bake history into
+        it. The conversation parameter is unused and kept only for the
+        plugin API contract.
+        """
+        messages = []
+        for msg in prompt.messages:
+            # System messages surface as systemInstruction in the
+            # request body; skip them here.
+            if msg.role == "system":
+                continue
+            # Tool-result messages get folded into a "user" role with
+            # function_response parts (Gemini doesn't have a "tool"
+            # role).
+            gemini_role = "model" if msg.role == "assistant" else "user"
+            parts = []
+            for part in msg.parts:
+                if isinstance(part, TextPart):
+                    if part.text:
+                        parts.append({"text": part.text})
+                elif isinstance(part, ToolCallPart):
+                    fc_part = {
+                        "function_call": {
+                            "name": part.name,
+                            "args": part.arguments,
                         }
                     }
-                    for tool_result in prompt.tool_results
-                ]
-            )
-        for attachment in prompt.attachments:
-            mime_type = resolve_type(attachment)
-            parts.append(self._build_attachment_part(attachment, mime_type))
-
-        messages.append({"role": "user", "parts": parts})
+                    sig = (part.provider_metadata or {}).get(
+                        "gemini", {}
+                    ).get("thoughtSignature")
+                    if sig:
+                        fc_part["thoughtSignature"] = sig
+                    parts.append(fc_part)
+                elif isinstance(part, ToolResultPart):
+                    parts.append(
+                        {
+                            "function_response": {
+                                "name": part.name,
+                                "response": {"output": part.output},
+                            }
+                        }
+                    )
+                elif isinstance(part, AttachmentPart) and part.attachment:
+                    mime_type = resolve_type(part.attachment)
+                    parts.append(
+                        self._build_attachment_part(part.attachment, mime_type)
+                    )
+                elif isinstance(part, ReasoningPart):
+                    # Gemini doesn't accept reasoning back in input —
+                    # provider stores its own state via thoughtSignature
+                    # on tool calls instead.
+                    pass
+            if parts:
+                messages.append({"role": gemini_role, "parts": parts})
         return messages
 
     def _build_attachment_part(self, attachment, mime_type):
@@ -632,10 +632,9 @@ class _SharedGemini:
                 }
             )
 
+        thinking_config: Dict[str, Any] = {}
         if self.can_thinking_budget and prompt.options.thinking_budget is not None:
-            generation_config["thinking_config"] = {
-                "thinking_budget": prompt.options.thinking_budget
-            }
+            thinking_config["thinkingBudget"] = prompt.options.thinking_budget
 
         if (
             self.thinking_levels
@@ -645,7 +644,14 @@ class _SharedGemini:
             thinking_level = prompt.options.thinking_level
             if hasattr(thinking_level, "value"):
                 thinking_level = thinking_level.value
-            generation_config["thinkingConfig"] = {"thinkingLevel": thinking_level}
+            thinking_config["thinkingLevel"] = thinking_level
+
+        if thinking_config:
+            # Ask the API to stream thought-summary parts so the LLM
+            # CLI can render them dimmed on stderr instead of just
+            # reporting an opaque token count.
+            thinking_config["includeThoughts"] = True
+            generation_config["thinkingConfig"] = thinking_config
 
         config_map = {
             "temperature": "temperature",
@@ -690,27 +696,61 @@ class _SharedGemini:
         return body
 
     def process_part(self, part, response):
+        """Process a Gemini content part and yield StreamEvent(s)."""
         if "functionCall" in part:
             tool_call = llm.ToolCall(
                 name=part["functionCall"]["name"],
                 arguments=part["functionCall"]["args"],
             )
-            # Store thought signature if present (required for Gemini 3 models)
-            if "thoughtSignature" in part:
-                tool_call.thought_signature = part["thoughtSignature"]
+            # Gemini 3 returns a thoughtSignature on each functionCall
+            # that must be echoed back on the next request. Stash it on
+            # the ToolCall (legacy code path) and on the StreamEvent's
+            # provider_metadata so the framework merges it onto the
+            # ToolCallPart for build_messages to read on replay.
+            sig = part.get("thoughtSignature")
+            if sig is not None:
+                tool_call.thought_signature = sig
             response.add_tool_call(tool_call)
-        if "text" in part:
-            return part["text"]
+            pm = {"gemini": {"thoughtSignature": sig}} if sig else None
+            yield StreamEvent(
+                type="tool_call_name",
+                chunk=part["functionCall"]["name"],
+                provider_metadata=pm,
+            )
+            yield StreamEvent(
+                type="tool_call_args",
+                chunk=json.dumps(part["functionCall"]["args"]),
+            )
+        elif "text" in part:
+            # Thought-summary parts (when includeThoughts=True) carry
+            # `thought: True`; surface them as reasoning so the CLI
+            # renders them dimmed on stderr.
+            if part.get("thought"):
+                yield StreamEvent(type="reasoning", chunk=part["text"])
+            else:
+                yield StreamEvent(type="text", chunk=part["text"])
         elif "executableCode" in part:
-            return f'```{part["executableCode"]["language"].lower()}\n{part["executableCode"]["code"].strip()}\n```\n'
+            code_text = f'```{part["executableCode"]["language"].lower()}\n{part["executableCode"]["code"].strip()}\n```\n'
+            yield StreamEvent(
+                type="tool_result",
+                chunk=code_text,
+                server_executed=True,
+                tool_name="code_execution",
+            )
         elif "codeExecutionResult" in part:
-            return f'```\n{part["codeExecutionResult"]["output"].strip()}\n```\n'
-        return ""
+            result_text = f'```\n{part["codeExecutionResult"]["output"].strip()}\n```\n'
+            yield StreamEvent(
+                type="tool_result",
+                chunk=result_text,
+                server_executed=True,
+                tool_name="code_execution",
+            )
 
     def process_candidates(self, candidates, response):
+        """Process candidates and yield StreamEvents."""
         # We only use the first candidate
         for part in candidates[0]["content"]["parts"]:
-            yield self.process_part(part, response)
+            yield from self.process_part(part, response)
 
     def set_usage(self, response):
         try:
@@ -744,6 +784,7 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
         gathered = []
         body = self.build_request_body(prompt, conversation)
 
+        saw_reasoning = False
         with httpx.stream(
             "POST",
             url,
@@ -760,16 +801,30 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
                         if isinstance(event, dict) and "error" in event:
                             raise llm.ModelError(event["error"]["message"])
                         try:
-                            yield from self.process_candidates(
+                            for stream_event in self.process_candidates(
                                 event["candidates"], response
-                            )
+                            ):
+                                if stream_event.type == "reasoning":
+                                    saw_reasoning = True
+                                yield stream_event
                         except KeyError:
-                            yield ""
+                            yield StreamEvent(type="text", chunk="")
                         gathered.append(event)
                     events.clear()
         response.response_json = gathered[-1]
         resolved_model = gathered[-1]["modelVersion"]
         response.set_resolved_model(resolved_model)
+        # When includeThoughts isn't set, Gemini reports only an
+        # opaque thoughtsTokenCount — emit a redacted reasoning marker
+        # so the assembled message records that thinking happened. If
+        # we already streamed visible reasoning, no marker needed.
+        if not saw_reasoning:
+            try:
+                usage = response.response_json.get("usageMetadata", {})
+                if usage.get("thoughtsTokenCount") or 0:
+                    yield StreamEvent(type="reasoning", chunk="", redacted=True)
+            except (AttributeError, KeyError):
+                pass
         self.set_usage(response)
 
 
@@ -779,6 +834,7 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
         gathered = []
         body = self.build_request_body(prompt, conversation)
 
+        saw_reasoning = False
         async with httpx.AsyncClient() as client:
             async with client.stream(
                 "POST",
@@ -796,15 +852,26 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                             if isinstance(event, dict) and "error" in event:
                                 raise llm.ModelError(event["error"]["message"])
                             try:
-                                for chunk in self.process_candidates(
+                                for stream_event in self.process_candidates(
                                     event["candidates"], response
                                 ):
-                                    yield chunk
+                                    if stream_event.type == "reasoning":
+                                        saw_reasoning = True
+                                    yield stream_event
                             except KeyError:
-                                yield ""
+                                yield StreamEvent(type="text", chunk="")
                             gathered.append(event)
                         events.clear()
         response.response_json = gathered[-1]
+        # See sync GeminiPro.execute: redacted marker only when no
+        # visible reasoning streamed.
+        if not saw_reasoning:
+            try:
+                usage = response.response_json.get("usageMetadata", {})
+                if usage.get("thoughtsTokenCount") or 0:
+                    yield StreamEvent(type="reasoning", chunk="", redacted=True)
+            except (AttributeError, KeyError):
+                pass
         self.set_usage(response)
 
 

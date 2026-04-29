@@ -1,6 +1,7 @@
 from click.testing import CliRunner
 import llm
 from llm.cli import cli
+from inline_snapshot import snapshot
 import json
 import os
 import pytest
@@ -17,40 +18,44 @@ GEMINI_API_KEY = os.environ.get("PYTEST_GEMINI_API_KEY", None) or "gm-..."
 def test_prompt():
     model = llm.get_model("gemini-1.5-flash-latest")
     response = model.prompt("Name for a pet pelican, just the name", key=GEMINI_API_KEY)
-    assert str(response) == "Percy\n"
-    assert response.response_json == {
-        "candidates": [
-            {
-                "finishReason": "STOP",
-                "safetyRatings": [
-                    {
-                        "category": "HARM_CATEGORY_HATE_SPEECH",
-                        "probability": "NEGLIGIBLE",
-                    },
-                    {
-                        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                        "probability": "NEGLIGIBLE",
-                    },
-                    {
-                        "category": "HARM_CATEGORY_HARASSMENT",
-                        "probability": "NEGLIGIBLE",
-                    },
-                    {
-                        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                        "probability": "NEGLIGIBLE",
-                    },
-                ],
-            }
-        ],
-        "modelVersion": "gemini-1.5-flash-latest",
-    }
-    assert response.token_details == {
-        "candidatesTokenCount": 2,
-        "promptTokensDetails": [{"modality": "TEXT", "tokenCount": 9}],
-        "candidatesTokensDetails": [{"modality": "TEXT", "tokenCount": 2}],
-    }
-    assert response.input_tokens == 9
-    assert response.output_tokens == 2
+    assert str(response) == snapshot("Percy\n")
+    assert response.response_json == snapshot(
+        {
+            "candidates": [
+                {
+                    "finishReason": "STOP",
+                    "safetyRatings": [
+                        {
+                            "category": "HARM_CATEGORY_HATE_SPEECH",
+                            "probability": "NEGLIGIBLE",
+                        },
+                        {
+                            "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+                            "probability": "NEGLIGIBLE",
+                        },
+                        {
+                            "category": "HARM_CATEGORY_HARASSMENT",
+                            "probability": "NEGLIGIBLE",
+                        },
+                        {
+                            "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+                            "probability": "NEGLIGIBLE",
+                        },
+                    ],
+                }
+            ],
+            "modelVersion": "gemini-1.5-flash-latest",
+        }
+    )
+    assert response.token_details == snapshot(
+        {
+            "candidatesTokenCount": 2,
+            "promptTokensDetails": [{"modality": "TEXT", "tokenCount": 9}],
+            "candidatesTokensDetails": [{"modality": "TEXT", "tokenCount": 2}],
+        }
+    )
+    assert response.input_tokens == snapshot(9)
+    assert response.output_tokens == snapshot(2)
 
 
 # Skip async test on Python 3.14 due to httpcore cleanup incompatibility
@@ -66,7 +71,7 @@ async def test_prompt_async():
         "Name for a pet pelican, just the name", key=GEMINI_API_KEY
     )
     text = await response.text()
-    assert text == "Percy\n"
+    assert text == snapshot("Percy\n")
 
 
 @pytest.mark.vcr
@@ -83,11 +88,13 @@ def test_prompt_with_pydantic_schema():
     response = model.prompt(
         "Invent a cool dog", key=GEMINI_API_KEY, schema=Dog, stream=False
     )
-    assert json.loads(response.text()) == {
-        "age": 3,
-        "bio": "A fluffy Samoyed with exceptional intelligence and a love for belly rubs. He's mastered several tricks, including fetching the newspaper and opening doors.",
-        "name": "Cloud",
-    }
+    assert json.loads(response.text()) == snapshot(
+        {
+            "age": 3,
+            "bio": "A fluffy Samoyed with exceptional intelligence and a love for belly rubs. He's mastered several tricks, including fetching the newspaper and opening doors.",
+            "name": "Cloud",
+        }
+    )
     assert response.response_json == {
         "candidates": [
             {
@@ -692,7 +699,7 @@ def test_resolved_model():
     model = llm.get_model("gemini-flash-latest")
     response = model.prompt("hi", key=GEMINI_API_KEY)
     response.text()
-    assert response.resolved_model == "gemini-2.5-flash-preview-09-2025"
+    assert response.resolved_model == snapshot("gemini-3-flash-preview")
 
 
 @pytest.mark.vcr
@@ -707,7 +714,9 @@ def test_tools():
         key=GEMINI_API_KEY,
     )
     text = chain_response.text()
-    assert text == "Okay, here are two names for a pet pelican: Charles and Sammy.\n"
+    assert text == snapshot(
+        "Okay, here are two names for a pet pelican: Charles and Sammy.\n"
+    )
     # This one did three
     assert len(chain_response._responses) == 3
     first, second, third = chain_response._responses
@@ -883,6 +892,7 @@ def test_thinking_level_in_request_body():
         tools = None
         schema = None
         tool_results = None
+        messages = [llm.user("test")]
 
     mock_prompt = MockPrompt()
     mock_prompt.options = model.Options(thinking_level="high")
@@ -905,6 +915,7 @@ def test_thinking_level_not_in_request_when_not_set():
         tools = None
         schema = None
         tool_results = None
+        messages = [llm.user("test")]
 
     mock_prompt = MockPrompt()
     mock_prompt.options = model.Options()
@@ -945,3 +956,49 @@ def test_tools_with_gemini_3_thought_signatures():
     assert first_response.tool_calls()[0].name == "multiply"
     # The result should be 15
     assert "15" in text
+
+
+# Phase 3: StreamEvent tests
+from llm.parts import StreamEvent, TextPart, ToolCallPart
+
+
+@pytest.mark.vcr
+def test_stream_events_text():
+    """stream_events() yields text StreamEvents."""
+    model = llm.get_model("gemini-3-flash-preview")
+    response = model.prompt("Say just hello", key=GEMINI_API_KEY)
+    events = list(response.stream_events())
+    text_events = [e for e in events if e.type == "text"]
+    assert len(text_events) > 0
+    text = "".join(e.chunk for e in text_events)
+    assert "hello" in text.lower() or "Hello" in text
+
+
+@pytest.mark.vcr
+def test_parts_text():
+    """response.parts returns TextPart for simple text response."""
+    model = llm.get_model("gemini-3-flash-preview")
+    response = model.prompt("Say just hello", key=GEMINI_API_KEY)
+    response.text()
+    parts = [p for m in response.messages() for p in m.parts]
+    text_parts = [p for p in parts if isinstance(p, TextPart)]
+    assert len(text_parts) >= 1
+    assert text_parts[0].text
+
+
+@pytest.mark.vcr
+def test_stream_events_tool_calls():
+    """stream_events() yields tool call StreamEvents."""
+    model = llm.get_model("gemini-3-flash-preview")
+    names = ["Percy"]
+    response = model.prompt(
+        "Generate one name for a pet pelican",
+        tools=[
+            llm.Tool.function(lambda: names.pop(0), name="pelican_name_generator"),
+        ],
+        key=GEMINI_API_KEY,
+    )
+    events = list(response.stream_events())
+    name_events = [e for e in events if e.type == "tool_call_name"]
+    assert len(name_events) >= 1, "Should have tool_call_name event"
+    assert name_events[0].chunk == snapshot("pelican_name_generator")
