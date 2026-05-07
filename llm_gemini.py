@@ -56,6 +56,7 @@ GOOGLE_SEARCH_MODELS = {
     "gemini-3.1-pro-preview",
     "gemini-3.1-pro-preview-customtools",
     "gemini-3.1-flash-lite-preview",
+    "gemini-3.1-flash-lite",
 }
 
 # Older Google models used google_search_retrieval instead of google_search
@@ -94,6 +95,7 @@ MODEL_THINKING_LEVELS = {
     "gemini-3.1-pro-preview": ["low", "medium", "high"],
     "gemini-3.1-pro-preview-customtools": ["low", "medium", "high"],
     "gemini-3.1-flash-lite-preview": ["minimal", "low", "medium", "high"],
+    "gemini-3.1-flash-lite": ["minimal", "low", "medium", "high"],
 }
 
 NO_VISION_MODELS = {"gemma-3-1b-it", "gemma-3n-e4b-it"}
@@ -218,6 +220,8 @@ def register_models(register):
         # 2nd April 2026
         "gemma-4-26b-a4b-it",
         "gemma-4-31b-it",
+        # 7th May 2026
+        "gemini-3.1-flash-lite",
     ):
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         can_thinking_budget = model_id in THINKING_BUDGET_MODELS
