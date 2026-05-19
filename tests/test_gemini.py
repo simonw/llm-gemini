@@ -894,8 +894,8 @@ def test_thinking_level_in_request_body():
     assert body["generationConfig"]["thinkingConfig"]["thinkingLevel"] == "high"
 
 
-def test_thinking_level_not_in_request_when_not_set():
-    """Thinking level should not be in request body when not set."""
+def test_thought_summaries_in_request_by_default():
+    """Thinking models should request visible thought summaries by default."""
     model = llm.get_model("gemini-3-flash-preview")
 
     class MockPrompt:
@@ -911,9 +911,62 @@ def test_thinking_level_not_in_request_when_not_set():
 
     body = model.build_request_body(mock_prompt, None)
 
-    # generationConfig may or may not exist, but if it does, thinkingConfig should not be there
+    assert body["generationConfig"]["thinkingConfig"] == {"includeThoughts": True}
+
+
+def test_thought_summaries_not_in_request_when_reasoning_hidden():
+    """hide_reasoning should disable visible Gemini thought summaries."""
+    model = llm.get_model("gemini-3-flash-preview")
+
+    class MockPrompt:
+        prompt = "test"
+        system = None
+        attachments = []
+        tools = None
+        schema = None
+        tool_results = None
+        hide_reasoning = True
+
+    mock_prompt = MockPrompt()
+    mock_prompt.options = model.Options()
+
+    body = model.build_request_body(mock_prompt, None)
+
     if "generationConfig" in body:
         assert "thinkingConfig" not in body["generationConfig"]
+
+
+def test_thought_part_yields_reasoning_stream_event():
+    """Gemini thought text parts should be surfaced as LLM reasoning events."""
+    model = llm.get_model("gemini-3-flash-preview")
+
+    class MockResponse:
+        def add_tool_call(self, tool_call):
+            raise AssertionError("No tool call expected")
+
+    events = list(
+        model.process_part(
+            {"thought": True, "text": "I should inspect the table first."},
+            MockResponse(),
+        )
+    )
+
+    assert len(events) == 1
+    assert events[0].type == "reasoning"
+    assert events[0].chunk == "I should inspect the table first."
+
+
+def test_empty_thought_part_yields_no_stream_event():
+    """Empty Gemini thought text should not open an empty reasoning block."""
+    model = llm.get_model("gemini-3-flash-preview")
+
+    class MockResponse:
+        def add_tool_call(self, tool_call):
+            raise AssertionError("No tool call expected")
+
+    events = list(model.process_part({"thought": True, "text": ""}, MockResponse()))
+
+    assert events == []
 
 
 @pytest.mark.vcr
