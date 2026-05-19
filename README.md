@@ -75,6 +75,7 @@ for line in lines:
     )
 cog.out("\n".join(to_output))
 ]]] -->
+- `gemini/gemini-3.5-flash`
 - `gemini/gemini-3.1-flash-lite`
 - `gemini/gemma-4-31b-it`
 - `gemini/gemma-4-26b-a4b-it`
