@@ -916,6 +916,80 @@ def test_thinking_level_not_in_request_when_not_set():
         assert "thinkingConfig" not in body["generationConfig"]
 
 
+def test_gemma_4_thinking_levels():
+    """Gemma 4 models should have thinking levels minimal and high."""
+    for model_id in ("gemma-4-31b-it", "gemma-4-26b-a4b-it"):
+        model = llm.get_model(model_id)
+        options_class = model.Options
+        assert "thinking_level" in options_class.model_fields
+        field_info = options_class.model_fields["thinking_level"]
+        annotation = field_info.annotation
+        args = getattr(annotation, "__args__", None)
+        thinking_enum = args[0] if args else annotation
+        level_values = {e.value for e in thinking_enum}
+        assert level_values == {"minimal", "high"}
+
+
+def test_include_thoughts_in_request_body():
+    """Include thoughts should be included in the request body when set."""
+    model = llm.get_model("gemma-4-31b-it")
+
+    class MockPrompt:
+        prompt = "test"
+        system = None
+        attachments = []
+        tools = None
+        schema = None
+        tool_results = None
+
+    mock_prompt = MockPrompt()
+    mock_prompt.options = model.Options(include_thoughts=True)
+
+    body = model.build_request_body(mock_prompt, None)
+
+    assert "generationConfig" in body
+    assert "thinkingConfig" in body["generationConfig"]
+    assert body["generationConfig"]["thinkingConfig"]["includeThoughts"] is True
+
+
+def test_thought_filtering():
+    """Thoughts should be filtered out when include_thoughts is False."""
+    model = llm.get_model("gemma-4-31b-it")
+
+    class MockResponse:
+        def __init__(self, include_thoughts):
+            # This is a bit of a hack to mock prompt options
+            class MockOptions:
+                pass
+
+            options = MockOptions()
+            options.include_thoughts = include_thoughts
+
+            class MockPrompt:
+                pass
+
+            self.prompt = MockPrompt()
+            self.prompt.options = options
+
+        def add_tool_call(self, tool_call):
+            pass
+
+    # Thought part
+    thought_part = {"text": "I am thinking", "thought": True}
+    # Regular part
+    regular_part = {"text": "Hello world"}
+
+    # Should show thoughts by default
+    response_default = MockResponse(None)
+    assert model.process_part(thought_part, response_default) == "I am thinking"
+    assert model.process_part(regular_part, response_default) == "Hello world"
+
+    # Should filter thoughts when include_thoughts=False
+    response_hide = MockResponse(False)
+    assert model.process_part(thought_part, response_hide) == ""
+    assert model.process_part(regular_part, response_hide) == "Hello world"
+
+
 @pytest.mark.vcr
 def test_tools_with_gemini_3_thought_signatures():
     """Test that tools work with Gemini 3 models which require thought signatures.
