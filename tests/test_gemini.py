@@ -945,3 +945,37 @@ def test_tools_with_gemini_3_thought_signatures():
     assert first_response.tool_calls()[0].name == "multiply"
     # The result should be 15
     assert "15" in text
+
+
+def test_build_messages_replays_stateless_history():
+    """Stateless callers pass prior turns via messages= (prompt.messages) with an
+    empty Conversation. build_messages must replay that history as text so the
+    model has memory across turns. Regression test for the 'amnesia' bug where
+    llm-gemini only read conversation.responses and dropped prompt.messages."""
+    from llm.parts import Message, TextPart
+
+    model = llm.get_model("gemini-2.5-flash")
+
+    chain = [
+        Message(role="user", parts=[TextPart(text="How many products in Germany?")]),
+        Message(role="assistant", parts=[TextPart(text="2,100 products.")]),
+        Message(role="user", parts=[TextPart(text="What was my first question?")]),
+    ]
+
+    class MockPrompt:
+        prompt = "What was my first question?"
+        system = None
+        attachments = []
+        tools = None
+        schema = None
+        tool_results = None
+        _explicit_messages = chain
+        messages = chain
+
+    contents = model.build_messages(MockPrompt(), None)
+
+    # Prior turns replayed as history, then the current turn last.
+    assert contents[0] == {"role": "user", "parts": [{"text": "How many products in Germany?"}]}
+    assert contents[1] == {"role": "model", "parts": [{"text": "2,100 products."}]}
+    assert contents[-1]["role"] == "user"
+    assert {"text": "What was my first question?"} in contents[-1]["parts"]

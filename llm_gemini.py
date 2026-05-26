@@ -513,8 +513,51 @@ class _SharedGemini:
         if can_vision:
             self.attachment_types = ATTACHMENT_TYPES
 
+    @staticmethod
+    def _history_text_contents(messages):
+        """Prior-turn conversation history as text-only Gemini ``contents``.
+
+        Stateless callers (llm's ``messages=`` chain API, e.g. datasette-agent)
+        pass prior turns on ``prompt.messages`` with an *empty* ``Conversation``,
+        so the ``conversation.responses`` loop below never sees them. We replay
+        those prior turns here as text only: a persisted ``ToolCallPart`` carries
+        no ``thoughtSignature`` (Gemini 3 requires one on ``functionCall`` parts),
+        and the current turn's live tool calls + signatures still come from
+        ``conversation.responses`` / ``prompt``. "Prior turns" is everything
+        before the last ``user`` message; the current turn is built separately.
+        """
+        from llm.parts import TextPart
+
+        last_user = -1
+        for i, msg in enumerate(messages):
+            if getattr(msg, "role", None) == "user":
+                last_user = i
+        contents = []
+        for msg in messages[:last_user] if last_user > 0 else []:
+            role = getattr(msg, "role", None)
+            if role == "system":
+                continue
+            text = "".join(
+                p.text for p in msg.parts if isinstance(p, TextPart) and p.text
+            )
+            if not text:
+                continue
+            contents.append(
+                {
+                    "role": "model" if role == "assistant" else "user",
+                    "parts": [{"text": text}],
+                }
+            )
+        return contents
+
     def build_messages(self, prompt, conversation):
         messages = []
+        # Replay cross-turn history for stateless callers (prompt.messages with
+        # an empty conversation). Without this they have no memory across turns.
+        if getattr(prompt, "_explicit_messages", None) is not None and not (
+            conversation and conversation.responses
+        ):
+            messages.extend(self._history_text_contents(prompt.messages))
         if conversation:
             for response in conversation.responses:
                 parts = []
