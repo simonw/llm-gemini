@@ -818,19 +818,9 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
 
 @llm.hookimpl
 def register_embedding_models(register):
-    register(GeminiEmbeddingModel("text-embedding-004", "text-embedding-004"))
-    # gemini-embedding-exp-03-07 in different truncation sizes
     register(
-        GeminiEmbeddingModel(
-            "gemini-embedding-exp-03-07", "gemini-embedding-exp-03-07"
-        ),
+        GeminiEmbeddingModel("gemini-embedding-001", "gemini-embedding-001"),
     )
-    for i in (128, 256, 512, 1024, 2048):
-        register(
-            GeminiEmbeddingModel(
-                f"gemini-embedding-exp-03-07-{i}", f"gemini-embedding-exp-03-07", i
-            ),
-        )
 
 
 class GeminiEmbeddingModel(llm.EmbeddingModel):
