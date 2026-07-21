@@ -8,7 +8,7 @@ Generate an SVG of a pelican riding a bicycle
 
 ## Response
 
-```xml
+```svg
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="100%" height="100%">
   <defs>
     <!-- Background Gradient -->
@@ -324,7 +324,7 @@ Generate an SVG of a pelican riding a bicycle
 
 ## Response
 
-```xml
+```svg
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="100%" height="100%">
   <defs>
     <!-- Background Gradient -->
