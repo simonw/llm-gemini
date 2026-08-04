@@ -1,11 +1,11 @@
 import click
 import copy
 from enum import Enum
-from html.parser import HTMLParser
 import httpx
 import ijson
 import json
 import llm
+from llm.models import _partition_tools
 from llm.parts import (
     AttachmentPart,
     ReasoningPart,
@@ -17,44 +17,7 @@ from llm.parts import (
 import re
 from pydantic import Field, create_model
 from typing import Any, Dict, Optional
-
-
-class _SearchSuggestionParser(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.links = []
-        self._href = None
-        self._text = []
-
-    def handle_starttag(self, tag, attrs):
-        if tag == "a":
-            self._href = dict(attrs).get("href")
-            self._text = []
-
-    def handle_data(self, data):
-        if self._href:
-            self._text.append(data)
-
-    def handle_endtag(self, tag):
-        if tag == "a" and self._href:
-            title = "".join(self._text).strip()
-            if title:
-                self.links.append((title, self._href))
-            self._href = None
-            self._text = []
-
-
-def _extract_search_suggestions(rendered_content):
-    parser = _SearchSuggestionParser()
-    parser.feed(rendered_content)
-    return parser.links
-
-
-def _format_link(title, url, use_osc8):
-    if use_osc8:
-        return f"\x1b]8;;{url}\a{title}\x1b]8;;\a"
-    return f"{title}: {url}"
-
+from uuid import uuid4
 
 SAFETY_SETTINGS = [
     {
@@ -119,6 +82,102 @@ GOOGLE_SEARCH_MODELS_USING_SEARCH_RETRIEVAL = {
     "gemini-1.5-flash-002",
     "gemini-2.0-flash-exp",
 }
+
+
+def _supports_url_context(model_id):
+    return model_id.startswith(("gemini-2.5", "gemini-3")) or model_id in {
+        "gemini-flash-latest",
+        "gemini-flash-lite-latest",
+    }
+
+
+def _supports_code_execution(model_id):
+    if model_id.startswith("gemini-2.0-flash-lite"):
+        return False
+    return model_id.startswith(
+        ("gemini-1.5", "gemini-2", "gemini-3", "gemini-flash")
+    )
+
+
+def _supports_server_tool_context(model_id):
+    return model_id.startswith("gemini-3")
+
+
+def _prepare_server_tool_request(model, body):
+    if not model.supports_server_tool_context:
+        return
+    tool_config = body.setdefault("toolConfig", {})
+    tool_config["includeServerSideToolInvocations"] = True
+    tool_config.setdefault("functionCallingConfig", {})["mode"] = "VALIDATED"
+
+
+class GoogleSearch(llm.ServerSideTool):
+    """Ground responses using up-to-date information from Google Search."""
+
+    name = "google_search"
+    plugin = "llm-gemini"
+
+    def __init__(self):
+        super().__init__()
+
+    def tool_spec(self, model):
+        if model.gemini_model_id in GOOGLE_SEARCH_MODELS_USING_SEARCH_RETRIEVAL:
+            return {"googleSearchRetrieval": {}}
+        return {"googleSearch": {}}
+
+    def prepare_request(self, model, body):
+        _prepare_server_tool_request(model, body)
+
+
+class URLContext(llm.ServerSideTool):
+    """Fetch and use content from URLs included in the prompt."""
+
+    name = "url_context"
+    plugin = "llm-gemini"
+
+    def __init__(self):
+        super().__init__()
+
+    def tool_spec(self, model):
+        return {"urlContext": {}}
+
+    def prepare_request(self, model, body):
+        _prepare_server_tool_request(model, body)
+
+
+class CodeExecution(llm.ServerSideTool):
+    """Let Gemini write and execute Python code while answering."""
+
+    name = "code_execution"
+    plugin = "llm-gemini"
+
+    def __init__(self):
+        super().__init__()
+
+    def tool_spec(self, model):
+        return {"codeExecution": {}}
+
+    def prepare_request(self, model, body):
+        _prepare_server_tool_request(model, body)
+
+
+SERVER_TOOL_NAMES = {
+    "GOOGLE_SEARCH": "google_search",
+    "GOOGLE_SEARCH_WEB": "google_search",
+    "URL_CONTEXT": "url_context",
+    "CODE_EXECUTION": "code_execution",
+}
+
+
+def _server_tool_name(tool_type):
+    if not tool_type:
+        return "server_side_tool"
+    return SERVER_TOOL_NAMES.get(tool_type, tool_type.lower())
+
+
+def _native_part_metadata(part):
+    return {"gemini": {"part": copy.deepcopy(part)}}
+
 
 THINKING_BUDGET_MODELS = {
     "gemini-2.0-flash-thinking-exp-01-21",
@@ -282,6 +341,8 @@ def register_models(register):
         "gemini-3.5-flash-lite",
     ):
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
+        can_url_context = _supports_url_context(model_id)
+        can_code_execution = _supports_code_execution(model_id)
         can_thinking_budget = model_id in THINKING_BUDGET_MODELS
         thinking_levels = MODEL_THINKING_LEVELS.get(model_id)
         can_vision = model_id not in NO_VISION_MODELS
@@ -292,6 +353,8 @@ def register_models(register):
                 model_id,
                 can_vision=can_vision,
                 can_google_search=can_google_search,
+                can_url_context=can_url_context,
+                can_code_execution=can_code_execution,
                 can_thinking_budget=can_thinking_budget,
                 thinking_levels=thinking_levels,
                 can_schema=can_schema,
@@ -301,6 +364,8 @@ def register_models(register):
                 model_id,
                 can_vision=can_vision,
                 can_google_search=can_google_search,
+                can_url_context=can_url_context,
+                can_code_execution=can_code_execution,
                 can_thinking_budget=can_thinking_budget,
                 thinking_levels=thinking_levels,
                 can_schema=can_schema,
@@ -431,10 +496,6 @@ class _SharedGemini:
     attachment_types = set()
 
     class Options(llm.Options):
-        code_execution: Optional[bool] = Field(
-            description="Enables the model to generate and run Python code",
-            default=None,
-        )
         temperature: Optional[float] = Field(
             description=(
                 "Controls the randomness of the output. Use higher values for "
@@ -482,19 +543,14 @@ class _SharedGemini:
             ),
             default=None,
         )
-        url_context: Optional[bool] = Field(
-            description=(
-                "Enable the URL context tool so the model can fetch content "
-                "from URLs mentioned in the prompt"
-            ),
-            default=None,
-        )
 
     def __init__(
         self,
         gemini_model_id,
         can_vision=True,
         can_google_search=False,
+        can_url_context=False,
+        can_code_execution=False,
         can_thinking_budget=False,
         thinking_levels=None,
         can_schema=False,
@@ -503,6 +559,11 @@ class _SharedGemini:
         self.model_id = "gemini/{}".format(gemini_model_id)
         self.gemini_model_id = gemini_model_id
         self.can_google_search = can_google_search
+        self.can_url_context = can_url_context
+        self.can_code_execution = can_code_execution
+        self.supports_server_tool_context = _supports_server_tool_context(
+            gemini_model_id
+        )
         self.supports_schema = can_schema
         self.can_thinking_budget = can_thinking_budget
         self.thinking_levels = thinking_levels
@@ -510,29 +571,6 @@ class _SharedGemini:
 
         # Build Options class dynamically based on capabilities
         extra_fields = {}
-
-        if can_google_search:
-            extra_fields["google_search"] = (
-                Optional[bool],
-                Field(
-                    description="Enables the model to use Google Search to improve the accuracy and recency of responses from the model",
-                    default=None,
-                ),
-            )
-            extra_fields["grounding_links"] = (
-                Optional[bool],
-                Field(
-                    description="Include grounding sources and search suggestions in the response",
-                    default=True,
-                ),
-            )
-            extra_fields["format_links"] = (
-                Optional[bool],
-                Field(
-                    description="Format grounding links using OSC 8 terminal hyperlinks",
-                    default=True,
-                ),
-            )
 
         if can_thinking_budget:
             extra_fields["thinking_budget"] = (
@@ -581,6 +619,17 @@ class _SharedGemini:
         if can_vision:
             self.attachment_types = ATTACHMENT_TYPES
 
+    @property
+    def supported_server_side_tools(self):
+        tools = []
+        if self.can_google_search:
+            tools.append(GoogleSearch)
+        if self.can_url_context:
+            tools.append(URLContext)
+        if self.can_code_execution:
+            tools.append(CodeExecution)
+        return tuple(tools)
+
     def build_messages(self, prompt, conversation):
         if hasattr(prompt, "messages"):
             messages = []
@@ -592,14 +641,33 @@ class _SharedGemini:
                 for part in msg.parts:
                     if isinstance(part, TextPart):
                         if part.text:
-                            parts.append({"text": part.text})
+                            text_part = {"text": part.text}
+                            sig = (
+                                (part.provider_metadata or {})
+                                .get("gemini", {})
+                                .get("thoughtSignature")
+                            )
+                            if sig:
+                                text_part["thoughtSignature"] = sig
+                            parts.append(text_part)
                     elif isinstance(part, ToolCallPart):
+                        if part.server_executed:
+                            native_part = (
+                                (part.provider_metadata or {})
+                                .get("gemini", {})
+                                .get("part")
+                            )
+                            if native_part:
+                                parts.append(copy.deepcopy(native_part))
+                            continue
                         fc_part = {
                             "function_call": {
                                 "name": part.name,
                                 "args": part.arguments,
                             }
                         }
+                        if part.tool_call_id:
+                            fc_part["function_call"]["id"] = part.tool_call_id
                         sig = (
                             (part.provider_metadata or {})
                             .get("gemini", {})
@@ -609,14 +677,22 @@ class _SharedGemini:
                             fc_part["thoughtSignature"] = sig
                         parts.append(fc_part)
                     elif isinstance(part, ToolResultPart):
-                        parts.append(
-                            {
-                                "function_response": {
-                                    "name": part.name,
-                                    "response": {"output": part.output},
-                                }
-                            }
-                        )
+                        if part.server_executed:
+                            native_part = (
+                                (part.provider_metadata or {})
+                                .get("gemini", {})
+                                .get("part")
+                            )
+                            if native_part:
+                                parts.append(copy.deepcopy(native_part))
+                            continue
+                        function_response = {
+                            "name": part.name,
+                            "response": {"output": part.output},
+                        }
+                        if part.tool_call_id:
+                            function_response["id"] = part.tool_call_id
+                        parts.append({"function_response": function_response})
                     elif isinstance(part, AttachmentPart) and part.attachment:
                         mime_type = resolve_type(part.attachment)
                         parts.append(
@@ -718,32 +794,34 @@ class _SharedGemini:
             body["systemInstruction"] = {"parts": [{"text": prompt.system}]}
 
         tools = []
-        if prompt.options and prompt.options.code_execution:
-            tools.append({"codeExecution": {}})
-        if prompt.options and self.can_google_search and prompt.options.google_search:
-            tool_name = (
-                "google_search_retrieval"
-                if self.model_id in GOOGLE_SEARCH_MODELS_USING_SEARCH_RETRIEVAL
-                else "google_search"
-            )
-            tools.append({tool_name: {}})
-        if prompt.options and prompt.options.url_context:
-            tools.append({"url_context": {}})
+        server_side_tools = []
         if prompt.tools:
-            tools.append(
-                {
-                    "functionDeclarations": [
-                        {
-                            "name": tool.name,
-                            "description": tool.description,
-                            "parameters": cleanup_schema(
-                                copy.deepcopy(tool.input_schema)
-                            ),
-                        }
-                        for tool in prompt.tools
-                    ]
-                }
-            )
+            function_tools, server_side_tools = _partition_tools(self, prompt.tools)
+            if (
+                function_tools
+                and server_side_tools
+                and not self.supports_server_tool_context
+            ):
+                raise ValueError(
+                    "Combining server-side tools with function tools is only "
+                    "supported by Gemini 3 models"
+                )
+            tools.extend(tool.tool_spec(self) for tool in server_side_tools)
+            if function_tools:
+                tools.append(
+                    {
+                        "functionDeclarations": [
+                            {
+                                "name": tool.name,
+                                "description": tool.description,
+                                "parameters": cleanup_schema(
+                                    copy.deepcopy(tool.input_schema)
+                                ),
+                            }
+                            for tool in function_tools
+                        ]
+                    }
+                )
         if tools:
             body["tools"] = tools
 
@@ -819,14 +897,19 @@ class _SharedGemini:
         if generation_config:
             body["generationConfig"] = generation_config
 
+        for tool in server_side_tools:
+            tool.prepare_request(self, body)
+
         return body
 
     def process_part(self, part, response):
         if "functionCall" in part:
+            function_call = part["functionCall"]
+            tool_call_id = function_call.get("id") or f"call_{uuid4().hex}"
             tool_call = llm.ToolCall(
-                name=part["functionCall"]["name"],
-                arguments=part["functionCall"]["args"],
-                tool_call_id=part["functionCall"].get("id"),
+                name=function_call["name"],
+                arguments=function_call.get("args") or {},
+                tool_call_id=tool_call_id,
             )
             # Store thought signature if present (required for Gemini 3 models)
             if "thoughtSignature" in part:
@@ -839,90 +922,150 @@ class _SharedGemini:
             )
             yield StreamEvent(
                 type="tool_call_name",
-                chunk=part["functionCall"]["name"],
-                tool_call_id=part["functionCall"].get("id"),
+                chunk=function_call["name"],
+                tool_call_id=tool_call_id,
                 provider_metadata=pm,
             )
             yield StreamEvent(
                 type="tool_call_args",
-                chunk=json.dumps(part["functionCall"]["args"]),
-                tool_call_id=part["functionCall"].get("id"),
+                chunk=json.dumps(function_call.get("args") or {}),
+                tool_call_id=tool_call_id,
             )
+            return
+
+        if "toolCall" in part:
+            tool_call = part["toolCall"]
+            tool_type = tool_call.get("toolType")
+            tool_name = _server_tool_name(tool_type)
+            tool_call_id = tool_call.get("id") or f"{tool_name}_{uuid4().hex}"
+            if response is not None:
+                pending_ids = getattr(response, "_gemini_server_tool_ids", {})
+                pending_ids[tool_type] = tool_call_id
+                response._gemini_server_tool_ids = pending_ids
+            yield StreamEvent(
+                type="tool_call_name",
+                chunk=tool_name,
+                tool_call_id=tool_call_id,
+                server_executed=True,
+                provider_metadata=_native_part_metadata(part),
+            )
+            yield StreamEvent(
+                type="tool_call_args",
+                chunk=json.dumps(tool_call.get("args") or {}),
+                tool_call_id=tool_call_id,
+                server_executed=True,
+            )
+            return
+
+        if "toolResponse" in part:
+            tool_response = part["toolResponse"]
+            tool_type = tool_response.get("toolType")
+            tool_name = _server_tool_name(tool_type)
+            pending_ids = getattr(response, "_gemini_server_tool_ids", {})
+            tool_call_id = (
+                tool_response.get("id")
+                or pending_ids.get(tool_type)
+                or f"{tool_name}_{uuid4().hex}"
+            )
+            yield StreamEvent(
+                type="tool_result",
+                chunk=json.dumps(tool_response.get("response", {})),
+                tool_call_id=tool_call_id,
+                server_executed=True,
+                tool_name=tool_name,
+                provider_metadata=_native_part_metadata(part),
+            )
+            return
+
         if "text" in part:
             text = part["text"]
             if not text:
                 return
+            provider_metadata = None
+            if "thoughtSignature" in part:
+                provider_metadata = {
+                    "gemini": {"thoughtSignature": part["thoughtSignature"]}
+                }
             if part.get("thought"):
-                yield StreamEvent(type="reasoning", chunk=text)
+                yield StreamEvent(
+                    type="reasoning",
+                    chunk=text,
+                    provider_metadata=provider_metadata,
+                )
             else:
-                yield StreamEvent(type="text", chunk=text)
-        elif "executableCode" in part:
-            code_text = f'```{part["executableCode"]["language"].lower()}\n{part["executableCode"]["code"].strip()}\n```\n'
+                yield StreamEvent(
+                    type="text",
+                    chunk=text,
+                    provider_metadata=provider_metadata,
+                )
+            return
+
+        if "executableCode" in part:
+            executable_code = part["executableCode"]
+            tool_call_id = executable_code.get("id") or f"code_{uuid4().hex}"
+            if response is not None:
+                response._gemini_code_execution_id = tool_call_id
+            yield StreamEvent(
+                type="tool_call_name",
+                chunk="code_execution",
+                tool_call_id=tool_call_id,
+                server_executed=True,
+                provider_metadata=_native_part_metadata(part),
+            )
+            yield StreamEvent(
+                type="tool_call_args",
+                chunk=json.dumps(executable_code),
+                tool_call_id=tool_call_id,
+                server_executed=True,
+            )
+            return
+
+        if "codeExecutionResult" in part:
+            code_execution_result = part["codeExecutionResult"]
+            tool_call_id = (
+                code_execution_result.get("id")
+                or getattr(response, "_gemini_code_execution_id", None)
+                or f"code_{uuid4().hex}"
+            )
             yield StreamEvent(
                 type="tool_result",
-                chunk=code_text,
+                chunk=json.dumps(code_execution_result),
+                tool_call_id=tool_call_id,
                 server_executed=True,
                 tool_name="code_execution",
-            )
-        elif "codeExecutionResult" in part:
-            result_text = f'```\n{part["codeExecutionResult"]["output"].strip()}\n```\n'
-            yield StreamEvent(
-                type="tool_result",
-                chunk=result_text,
-                server_executed=True,
-                tool_name="code_execution",
+                provider_metadata=_native_part_metadata(part),
             )
 
-    def format_grounding(self, grounding, options):
-        if not getattr(options, "grounding_links", True):
-            return ""
-
-        use_osc8 = getattr(options, "format_links", True)
-        sources = []
-        seen_urls = set()
-        for chunk in grounding.get("groundingChunks", []):
-            web = chunk.get("web")
-            if not web or not web.get("uri") or web["uri"] in seen_urls:
-                continue
-            seen_urls.add(web["uri"])
-            sources.append((web.get("title") or web["uri"], web["uri"]))
-
-        rendered_content = grounding.get("searchEntryPoint", {}).get(
-            "renderedContent", ""
-        )
-        suggestions = (
-            _extract_search_suggestions(rendered_content) if rendered_content else []
-        )
-
-        sections = []
-        if sources:
-            source_lines = ["Grounding Sources:"]
-            source_lines.extend(
-                f"{index}. {_format_link(title, url, use_osc8)}"
-                for index, (title, url) in enumerate(sources, 1)
-            )
-            sections.append("\n".join(source_lines))
-        if suggestions:
-            suggestion_lines = ["Google Search Suggestions:"]
-            suggestion_lines.extend(
-                _format_link(title, url, use_osc8) for title, url in suggestions
-            )
-            sections.append("\n".join(suggestion_lines))
-
-        return "\n\n" + "\n\n".join(sections) if sections else ""
-
-    def process_candidates(self, candidates, response, options=None):
+    def process_candidates(self, candidates, response):
         # We only use the first candidate
         candidate = candidates[0]
-        for part in candidate["content"]["parts"]:
-            yield from self.process_part(part, response)
+        events = []
+        for part in candidate.get("content", {}).get("parts", []):
+            events.extend(self.process_part(part, response))
+
         grounding = candidate.get("groundingMetadata")
         if grounding:
-            yield StreamEvent(
-                type="text",
-                chunk=self.format_grounding(grounding, options),
-                provider_metadata={"gemini": {"groundingMetadata": grounding}},
-            )
+            grounding_metadata = {"gemini": {"groundingMetadata": grounding}}
+            for event in reversed(events):
+                if event.type == "text":
+                    provider_metadata = dict(event.provider_metadata or {})
+                    gemini_metadata = dict(provider_metadata.get("gemini", {}))
+                    gemini_metadata["groundingMetadata"] = grounding
+                    provider_metadata["gemini"] = gemini_metadata
+                    event.provider_metadata = provider_metadata
+                    break
+            else:
+                # If grounding arrives in a metadata-only streaming event, this
+                # empty text event will group with the preceding text part.
+                events.append(
+                    StreamEvent(
+                        type="text",
+                        chunk="",
+                        provider_metadata=grounding_metadata,
+                    )
+                )
+
+        yield from events
 
     def set_usage(self, response):
         try:
@@ -973,7 +1116,7 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
                             raise llm.ModelError(event["error"]["message"])
                         try:
                             yield from self.process_candidates(
-                                event["candidates"], response, prompt.options
+                                event["candidates"], response
                             )
                         except KeyError:
                             yield StreamEvent(type="text", chunk="")
@@ -1009,7 +1152,7 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                                 raise llm.ModelError(event["error"]["message"])
                             try:
                                 for stream_event in self.process_candidates(
-                                    event["candidates"], response, prompt.options
+                                    event["candidates"], response
                                 ):
                                     yield stream_event
                             except KeyError:

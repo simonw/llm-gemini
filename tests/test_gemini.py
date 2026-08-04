@@ -1036,13 +1036,321 @@ def test_build_messages_replays_stateless_history():
     }
 
 
-def test_google_search_grounding_sources_and_suggestions():
+def test_hosted_tool_options_are_removed():
     model = llm.get_model("gemini-3.6-flash")
-    options = model.Options(
-        google_search=True,
-        grounding_links=True,
-        format_links=False,
+
+    assert {
+        "google_search",
+        "url_context",
+        "code_execution",
+        "grounding_links",
+        "format_links",
+    }.isdisjoint(model.Options.model_fields)
+
+
+@pytest.mark.parametrize(
+    "model_id,expected_tools",
+    (
+        (
+            "gemini-3.6-flash",
+            {"GoogleSearch", "URLContext", "CodeExecution"},
+        ),
+        (
+            "gemini-2.5-flash",
+            {"GoogleSearch", "URLContext", "CodeExecution"},
+        ),
+        ("gemini-1.5-flash-latest", {"GoogleSearch", "CodeExecution"}),
+        ("gemini-2.0-flash-lite", set()),
+        ("gemma-4-26b-a4b-it", set()),
+    ),
+)
+def test_supported_server_side_tools(model_id, expected_tools):
+    model = llm.get_model(model_id)
+
+    assert {
+        tool.__name__ for tool in model.supported_server_side_tools
+    } == expected_tools
+
+
+def test_server_side_tool_request_specs_and_config():
+    from llm_gemini import CodeExecution, GoogleSearch, URLContext
+
+    model = llm.get_model("gemini-3.6-flash")
+    prompt = llm.Prompt(
+        "Research this and check the result with code",
+        model,
+        options=model.Options(),
+        tools=[GoogleSearch(), URLContext(), CodeExecution()],
     )
+
+    body = model.build_request_body(prompt, None)
+
+    assert body["tools"] == [
+        {"googleSearch": {}},
+        {"urlContext": {}},
+        {"codeExecution": {}},
+    ]
+    assert body["toolConfig"] == {
+        "includeServerSideToolInvocations": True,
+        "functionCallingConfig": {"mode": "VALIDATED"},
+    }
+
+
+def test_google_search_uses_legacy_spec_on_gemini_15():
+    from llm_gemini import GoogleSearch
+
+    model = llm.get_model("gemini-1.5-flash-latest")
+    prompt = llm.Prompt(
+        "Search for pelicans",
+        model,
+        options=model.Options(),
+        tools=[GoogleSearch()],
+    )
+
+    body = model.build_request_body(prompt, None)
+
+    assert body["tools"] == [{"googleSearchRetrieval": {}}]
+    assert "toolConfig" not in body
+
+
+def test_gemini_3_combines_function_and_server_side_tools():
+    from llm_gemini import GoogleSearch
+
+    model = llm.get_model("gemini-3.6-flash")
+    weather = llm.Tool(
+        name="weather",
+        description="Look up the weather for a city",
+        input_schema={
+            "type": "object",
+            "properties": {"city": {"type": "string"}},
+            "required": ["city"],
+        },
+    )
+    prompt = llm.Prompt(
+        "Compare sources with the weather tool",
+        model,
+        options=model.Options(),
+        tools=[weather, GoogleSearch()],
+    )
+
+    body = model.build_request_body(prompt, None)
+
+    assert body["tools"] == [
+        {"googleSearch": {}},
+        {
+            "functionDeclarations": [
+                {
+                    "name": "weather",
+                    "description": "Look up the weather for a city",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"city": {"type": "string"}},
+                        "required": ["city"],
+                    },
+                }
+            ]
+        },
+    ]
+    assert body["toolConfig"] == {
+        "includeServerSideToolInvocations": True,
+        "functionCallingConfig": {"mode": "VALIDATED"},
+    }
+
+
+def test_pre_gemini_3_rejects_mixed_function_and_server_side_tools():
+    from llm_gemini import GoogleSearch
+
+    model = llm.get_model("gemini-2.5-flash")
+    local_tool = llm.Tool(name="local_tool", input_schema={"type": "object"})
+    prompt = llm.Prompt(
+        "Use both tools",
+        model,
+        options=model.Options(),
+        tools=[local_tool, GoogleSearch()],
+    )
+
+    with pytest.raises(ValueError, match="Gemini 3"):
+        model.build_request_body(prompt, None)
+
+
+def test_unsupported_server_side_tool_raises():
+    from llm_gemini import GoogleSearch
+
+    model = llm.get_model("gemma-4-26b-a4b-it")
+    prompt = llm.Prompt(
+        "Search for pelicans",
+        model,
+        options=model.Options(),
+        tools=[GoogleSearch()],
+    )
+
+    with pytest.raises(ValueError, match="does not support server-side tool"):
+        model.build_request_body(prompt, None)
+
+
+def test_server_side_tools_are_listed_by_cli():
+    runner = CliRunner()
+
+    result = runner.invoke(cli, ["tools", "list", "-m", "gemini-3.6-flash"])
+
+    assert result.exit_code == 0
+    assert "GoogleSearch()" in result.output
+    assert "URLContext()" in result.output
+    assert "CodeExecution()" in result.output
+
+
+class _NoLocalToolCallsResponse:
+    def add_tool_call(self, tool_call):
+        raise AssertionError("Server-side tools must not be registered as local calls")
+
+
+def test_native_server_tool_call_and_response_events():
+    model = llm.get_model("gemini-3.6-flash")
+    raw_call = {
+        "thoughtSignature": "signature-123",
+        "toolCall": {
+            "toolType": "GOOGLE_SEARCH_WEB",
+            "args": {"queries": ["latest pelican research"]},
+            "id": "search-123",
+        },
+    }
+    raw_response = {
+        "thoughtSignature": "signature-456",
+        "toolResponse": {
+            "toolType": "GOOGLE_SEARCH_WEB",
+            "response": {
+                "search_suggestions": [
+                    {"title": "Pelican research", "url": "https://example.com/"}
+                ]
+            },
+            "id": "search-123",
+        },
+    }
+
+    events = list(
+        model.process_candidates(
+            [{"content": {"parts": [raw_call, raw_response]}}],
+            _NoLocalToolCallsResponse(),
+        )
+    )
+
+    assert [event.type for event in events] == [
+        "tool_call_name",
+        "tool_call_args",
+        "tool_result",
+    ]
+    assert [event.tool_call_id for event in events] == [
+        "search-123",
+        "search-123",
+        "search-123",
+    ]
+    assert all(event.server_executed for event in events)
+    assert events[0].chunk == "google_search"
+    assert json.loads(events[1].chunk) == {"queries": ["latest pelican research"]}
+    assert events[2].tool_name == "google_search"
+    assert json.loads(events[2].chunk) == raw_response["toolResponse"]["response"]
+    assert events[0].provider_metadata == {"gemini": {"part": raw_call}}
+    assert events[2].provider_metadata == {"gemini": {"part": raw_response}}
+
+
+def test_native_code_execution_events_share_generated_id():
+    model = llm.get_model("gemini-3.6-flash")
+    raw_code = {
+        "executableCode": {
+            "language": "PYTHON",
+            "code": "print(6 * 7)",
+        }
+    }
+    raw_result = {
+        "codeExecutionResult": {
+            "outcome": "OUTCOME_OK",
+            "output": "42\n",
+        }
+    }
+
+    events = list(
+        model.process_candidates(
+            [{"content": {"parts": [raw_code, raw_result]}}],
+            _NoLocalToolCallsResponse(),
+        )
+    )
+
+    assert [event.type for event in events] == [
+        "tool_call_name",
+        "tool_call_args",
+        "tool_result",
+    ]
+    assert events[0].tool_call_id
+    assert len({event.tool_call_id for event in events}) == 1
+    assert all(event.server_executed for event in events)
+    assert events[0].chunk == "code_execution"
+    assert json.loads(events[1].chunk) == raw_code["executableCode"]
+    assert events[2].tool_name == "code_execution"
+    assert json.loads(events[2].chunk) == raw_result["codeExecutionResult"]
+    assert events[0].provider_metadata == {"gemini": {"part": raw_code}}
+    assert events[2].provider_metadata == {"gemini": {"part": raw_result}}
+
+
+def test_native_server_tool_parts_replay_verbatim():
+    from llm.parts import Message, ToolCallPart, ToolResultPart
+
+    model = llm.get_model("gemini-3.6-flash")
+    raw_call = {
+        "thoughtSignature": "signature-123",
+        "toolCall": {
+            "toolType": "URL_CONTEXT",
+            "args": {"urls": ["https://example.com/"]},
+            "id": "url-123",
+        },
+    }
+    raw_response = {
+        "toolResponse": {
+            "toolType": "URL_CONTEXT",
+            "response": {"url": "https://example.com/", "status": "OK"},
+            "id": "url-123",
+        }
+    }
+    messages = [
+        Message(
+            role="assistant",
+            parts=[
+                ToolCallPart(
+                    name="url_context",
+                    arguments=raw_call["toolCall"]["args"],
+                    tool_call_id="url-123",
+                    server_executed=True,
+                    provider_metadata={"gemini": {"part": raw_call}},
+                ),
+                ToolResultPart(
+                    name="url_context",
+                    output=json.dumps(raw_response["toolResponse"]["response"]),
+                    tool_call_id="url-123",
+                    server_executed=True,
+                    provider_metadata={"gemini": {"part": raw_response}},
+                ),
+            ],
+        )
+    ]
+
+    class MockPrompt:
+        prompt = None
+        system = None
+        attachments = []
+        tools = None
+        schema = None
+        tool_results = None
+
+    prompt = MockPrompt()
+    prompt.messages = messages
+    prompt.options = model.Options()
+
+    assert model.build_messages(prompt, None) == [
+        {"role": "model", "parts": [raw_call, raw_response]}
+    ]
+
+
+def test_google_search_grounding_metadata_is_raw_and_text_is_unchanged():
+    model = llm.get_model("gemini-3.6-flash")
     grounding = {
         "groundingChunks": [
             {
@@ -1051,13 +1359,19 @@ def test_google_search_grounding_sources_and_suggestions():
                     "uri": "https://example.com/source",
                 }
             },
-            {
-                "web": {
-                    "title": "Duplicate source",
-                    "uri": "https://example.com/source",
-                }
-            },
         ],
+        "groundingSupports": [
+            {
+                "segment": {
+                    "startIndex": 0,
+                    "endIndex": 24,
+                    "text": "Pelicans live worldwide.",
+                },
+                "groundingChunkIndices": [0],
+                "confidenceScores": [0.98],
+            }
+        ],
+        "webSearchQueries": ["where pelicans live"],
         "searchEntryPoint": {
             "renderedContent": (
                 '<a href="https://example.com/search">'
@@ -1068,18 +1382,17 @@ def test_google_search_grounding_sources_and_suggestions():
 
     events = list(
         model.process_candidates(
-            [{"content": {"parts": []}, "groundingMetadata": grounding}],
-            response=None,
-            options=options,
+            [
+                {
+                    "content": {"parts": [{"text": "Pelicans live worldwide."}]},
+                    "groundingMetadata": grounding,
+                }
+            ],
+            response=_NoLocalToolCallsResponse(),
         )
     )
 
     assert len(events) == 1
     assert events[0].type == "text"
-    assert events[0].chunk == (
-        "\n\nGrounding Sources:\n"
-        "1. Example source: https://example.com/source\n\n"
-        "Google Search Suggestions:\n"
-        "Latest pelican research: https://example.com/search"
-    )
+    assert events[0].chunk == "Pelicans live worldwide."
     assert events[0].provider_metadata == {"gemini": {"groundingMetadata": grounding}}

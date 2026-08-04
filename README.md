@@ -185,43 +185,44 @@ Outputs:
 
 Gemini models can [write and execute code](https://ai.google.dev/gemini-api/docs/code-execution) - they can decide to write Python code, execute it in a secure sandbox and use the result as part of their response.
 
-To enable this feature, use `-o code_execution 1`:
+Enable this server-side tool with `-T CodeExecution`:
 
 ```bash
-llm -m gemini-2.0-flash -o code_execution 1 \
+llm -m gemini-3.6-flash -T CodeExecution \
 'use python to calculate (factorial of 13) * 3'
 ```
 ### Google search
 
-Some Gemini models support [Grounding with Google Search](https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/ground-gemini#web-ground-gemini), where the model can run a Google search and use the results as part of answering a prompt.
+Some Gemini models support [Grounding with Google Search](https://ai.google.dev/gemini-api/docs/google-search), where the model can run a Google search and use the results as part of answering a prompt.
 
 Using this feature may incur additional requirements in terms of how you use the results. Consult [Google's documentation](https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/ground-gemini#web-ground-gemini) for more details.
 
-To run a prompt with Google search enabled, use `-o google_search 1`:
+Enable this server-side tool with `-T GoogleSearch`:
 
 ```bash
-llm -m gemini-2.0-flash -o google_search 1 \
+llm -m gemini-3.6-flash -T GoogleSearch \
   'What happened in Ireland today?'
 ```
 
-Grounding sources and Google Search suggestions are appended to the response as
-terminal hyperlinks. Use `-o grounding_links 0` to omit them or
-`-o format_links 0` to display plain URLs instead of OSC 8 hyperlinks.
+The plugin leaves the model's response text unchanged and retains Gemini's raw
+`groundingMetadata` on the response part. Use `llm logs -c --json` after running
+a prompt to inspect that metadata, which includes [additional information](https://github.com/simonw/llm-gemini/pull/29#issuecomment-2606201877) about grounded results.
 
-Use `llm logs -c --json` after running a prompt to see the full JSON response, which includes [additional information](https://github.com/simonw/llm-gemini/pull/29#issuecomment-2606201877) about grounded results.
+When Gemini returns native server-side tool invocation parts, the plugin exposes
+those as structured server-side tool call and result events as well.
 
 ### URL context
 
 Gemini models support a [URL context](https://ai.google.dev/gemini-api/docs/url-context) tool which, when enabled, allows the models to fetch additional content from URLs as part of their execution.
 
-You can enable that with the `-o url_context 1` option - for example:
+Enable this server-side tool with `-T URLContext` - for example:
 
 ```bash
-llm -m gemini-2.5-flash -o url_context 1 'Latest headline on simonwillison.net'
+llm -m gemini-2.5-flash -T URLContext 'Latest headline on simonwillison.net'
 ```
 Extra tokens introduced by this tool will be charged as input tokens. Use `--usage` to see details of those:
 ```bash
-llm -m gemini-2.5-flash -o url_context 1 --usage \
+llm -m gemini-2.5-flash -T URLContext --usage \
   'Latest headline on simonwillison.net'
 ```
 Outputs:
