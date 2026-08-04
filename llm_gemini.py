@@ -5,9 +5,17 @@ import httpx
 import ijson
 import json
 import llm
+from llm.parts import (
+    AttachmentPart,
+    ReasoningPart,
+    StreamEvent,
+    TextPart,
+    ToolCallPart,
+    ToolResultPart,
+)
 import re
 from pydantic import Field, create_model
-from typing import Optional
+from typing import Any, Dict, Optional
 
 SAFETY_SETTINGS = [
     {
@@ -514,6 +522,53 @@ class _SharedGemini:
             self.attachment_types = ATTACHMENT_TYPES
 
     def build_messages(self, prompt, conversation):
+        if hasattr(prompt, "messages"):
+            messages = []
+            for msg in prompt.messages:
+                if msg.role == "system":
+                    continue
+                gemini_role = "model" if msg.role == "assistant" else "user"
+                parts = []
+                for part in msg.parts:
+                    if isinstance(part, TextPart):
+                        if part.text:
+                            parts.append({"text": part.text})
+                    elif isinstance(part, ToolCallPart):
+                        fc_part = {
+                            "function_call": {
+                                "name": part.name,
+                                "args": part.arguments,
+                            }
+                        }
+                        sig = (part.provider_metadata or {}).get("gemini", {}).get(
+                            "thoughtSignature"
+                        )
+                        if sig:
+                            fc_part["thoughtSignature"] = sig
+                        parts.append(fc_part)
+                    elif isinstance(part, ToolResultPart):
+                        parts.append(
+                            {
+                                "function_response": {
+                                    "name": part.name,
+                                    "response": {"output": part.output},
+                                }
+                            }
+                        )
+                    elif isinstance(part, AttachmentPart) and part.attachment:
+                        mime_type = resolve_type(part.attachment)
+                        parts.append(
+                            self._build_attachment_part(part.attachment, mime_type)
+                        )
+                    elif isinstance(part, ReasoningPart):
+                        # Gemini does not accept visible reasoning text back in
+                        # input. Tool-call state is preserved using
+                        # thoughtSignature metadata on the function_call part.
+                        pass
+                if parts:
+                    messages.append({"role": gemini_role, "parts": parts})
+            return messages
+
         messages = []
         if conversation:
             for response in conversation.responses:
@@ -640,10 +695,9 @@ class _SharedGemini:
                 }
             )
 
+        thinking_config: Dict[str, Any] = {}
         if self.can_thinking_budget and prompt.options.thinking_budget is not None:
-            generation_config["thinking_config"] = {
-                "thinking_budget": prompt.options.thinking_budget
-            }
+            thinking_config["thinkingBudget"] = prompt.options.thinking_budget
 
         if (
             self.thinking_levels
@@ -653,7 +707,16 @@ class _SharedGemini:
             thinking_level = prompt.options.thinking_level
             if hasattr(thinking_level, "value"):
                 thinking_level = thinking_level.value
-            generation_config["thinkingConfig"] = {"thinkingLevel": thinking_level}
+            thinking_config["thinkingLevel"] = thinking_level
+
+        if (
+            (self.can_thinking_budget or self.thinking_levels)
+            and not getattr(prompt, "hide_reasoning", False)
+        ):
+            thinking_config["includeThoughts"] = True
+
+        if thinking_config:
+            generation_config["thinkingConfig"] = thinking_config
 
         config_map = {
             "temperature": "temperature",
@@ -702,23 +765,57 @@ class _SharedGemini:
             tool_call = llm.ToolCall(
                 name=part["functionCall"]["name"],
                 arguments=part["functionCall"]["args"],
+                tool_call_id=part["functionCall"].get("id"),
             )
             # Store thought signature if present (required for Gemini 3 models)
             if "thoughtSignature" in part:
                 tool_call.thought_signature = part["thoughtSignature"]
             response.add_tool_call(tool_call)
+            pm = (
+                {"gemini": {"thoughtSignature": part["thoughtSignature"]}}
+                if "thoughtSignature" in part
+                else None
+            )
+            yield StreamEvent(
+                type="tool_call_name",
+                chunk=part["functionCall"]["name"],
+                tool_call_id=part["functionCall"].get("id"),
+                provider_metadata=pm,
+            )
+            yield StreamEvent(
+                type="tool_call_args",
+                chunk=json.dumps(part["functionCall"]["args"]),
+                tool_call_id=part["functionCall"].get("id"),
+            )
         if "text" in part:
-            return part["text"]
+            text = part["text"]
+            if not text:
+                return
+            if part.get("thought"):
+                yield StreamEvent(type="reasoning", chunk=text)
+            else:
+                yield StreamEvent(type="text", chunk=text)
         elif "executableCode" in part:
-            return f'```{part["executableCode"]["language"].lower()}\n{part["executableCode"]["code"].strip()}\n```\n'
+            code_text = f'```{part["executableCode"]["language"].lower()}\n{part["executableCode"]["code"].strip()}\n```\n'
+            yield StreamEvent(
+                type="tool_result",
+                chunk=code_text,
+                server_executed=True,
+                tool_name="code_execution",
+            )
         elif "codeExecutionResult" in part:
-            return f'```\n{part["codeExecutionResult"]["output"].strip()}\n```\n'
-        return ""
+            result_text = f'```\n{part["codeExecutionResult"]["output"].strip()}\n```\n'
+            yield StreamEvent(
+                type="tool_result",
+                chunk=result_text,
+                server_executed=True,
+                tool_name="code_execution",
+            )
 
     def process_candidates(self, candidates, response):
         # We only use the first candidate
         for part in candidates[0]["content"]["parts"]:
-            yield self.process_part(part, response)
+            yield from self.process_part(part, response)
 
     def set_usage(self, response):
         try:
@@ -772,7 +869,7 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
                                 event["candidates"], response
                             )
                         except KeyError:
-                            yield ""
+                            yield StreamEvent(type="text", chunk="")
                         gathered.append(event)
                     events.clear()
         response.response_json = gathered[-1]
@@ -804,12 +901,12 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                             if isinstance(event, dict) and "error" in event:
                                 raise llm.ModelError(event["error"]["message"])
                             try:
-                                for chunk in self.process_candidates(
+                                for stream_event in self.process_candidates(
                                     event["candidates"], response
                                 ):
-                                    yield chunk
+                                    yield stream_event
                             except KeyError:
-                                yield ""
+                                yield StreamEvent(type="text", chunk="")
                             gathered.append(event)
                         events.clear()
         response.response_json = gathered[-1]
