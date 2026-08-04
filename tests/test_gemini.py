@@ -1,6 +1,7 @@
 from click.testing import CliRunner
 import llm
 from llm.cli import cli
+from llm.parts import StreamEvent
 import json
 import os
 import pytest
@@ -1096,6 +1097,25 @@ def test_server_side_tool_request_specs_and_config():
     }
 
 
+@pytest.mark.parametrize("model_id", ("gemini-flash-latest", "gemini-flash-lite-latest"))
+def test_latest_aliases_enable_server_tool_context(model_id):
+    from llm_gemini import GoogleSearch
+
+    model = llm.get_model(model_id)
+    local_tool = llm.Tool(name="local_tool", input_schema={"type": "object"})
+    prompt = llm.Prompt(
+        "Search for pelicans",
+        model,
+        options=model.Options(),
+        tools=[GoogleSearch(), local_tool],
+    )
+
+    body = model.build_request_body(prompt, None)
+
+    assert body["toolConfig"]["includeServerSideToolInvocations"] is True
+    assert body["tools"][1]["functionDeclarations"][0]["name"] == "local_tool"
+
+
 def test_google_search_uses_legacy_spec_on_gemini_15():
     from llm_gemini import GoogleSearch
 
@@ -1251,6 +1271,26 @@ def test_native_server_tool_call_and_response_events():
     assert json.loads(events[2].chunk) == raw_response["toolResponse"]["response"]
     assert events[0].provider_metadata == {"gemini": {"part": raw_call}}
     assert events[2].provider_metadata == {"gemini": {"part": raw_response}}
+
+
+def test_empty_text_part_retains_thought_signature(monkeypatch):
+    model = llm.get_model("gemini-3.6-flash")
+
+    def execute(prompt, stream, response, conversation, key):
+        yield StreamEvent(type="text", chunk="answer")
+        yield from model.process_part(
+            {"text": "", "thoughtSignature": "signature-123"},
+            response,
+        )
+
+    monkeypatch.setattr(model, "execute", execute)
+    response = model.prompt("test", key="test")
+
+    assert response.text() == "answer"
+    text_part = response.messages()[0].parts[0]
+    assert text_part.provider_metadata == {
+        "gemini": {"thoughtSignature": "signature-123"}
+    }
 
 
 def test_native_code_execution_events_share_generated_id():

@@ -100,7 +100,10 @@ def _supports_code_execution(model_id):
 
 
 def _supports_server_tool_context(model_id):
-    return model_id.startswith("gemini-3")
+    return model_id.startswith("gemini-3") or model_id in {
+        "gemini-flash-latest",
+        "gemini-flash-lite-latest",
+    }
 
 
 def _prepare_server_tool_request(model, body):
@@ -979,7 +982,7 @@ class _SharedGemini:
 
         if "text" in part:
             text = part["text"]
-            if not text:
+            if not text and "thoughtSignature" not in part:
                 return
             provider_metadata = None
             if "thoughtSignature" in part:
@@ -1107,7 +1110,9 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
             json=body,
         ) as http_response:
             events = ijson.sendable_list()
-            coro = ijson.items_coro(events, "item")
+            # Keep provider metadata JSON-serializable: ijson otherwise parses
+            # fractional values such as grounding confidence scores as Decimal.
+            coro = ijson.items_coro(events, "item", use_float=True)
             for chunk in http_response.iter_bytes():
                 coro.send(chunk)
                 if events:
@@ -1143,7 +1148,7 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                 json=body,
             ) as http_response:
                 events = ijson.sendable_list()
-                coro = ijson.items_coro(events, "item")
+                coro = ijson.items_coro(events, "item", use_float=True)
                 async for chunk in http_response.aiter_bytes():
                     coro.send(chunk)
                     if events:
