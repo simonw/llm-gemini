@@ -1034,3 +1034,52 @@ def test_build_messages_replays_stateless_history():
         "role": "user",
         "parts": [{"text": "What was my first question?"}],
     }
+
+
+def test_google_search_grounding_sources_and_suggestions():
+    model = llm.get_model("gemini-3.6-flash")
+    options = model.Options(
+        google_search=True,
+        grounding_links=True,
+        format_links=False,
+    )
+    grounding = {
+        "groundingChunks": [
+            {
+                "web": {
+                    "title": "Example source",
+                    "uri": "https://example.com/source",
+                }
+            },
+            {
+                "web": {
+                    "title": "Duplicate source",
+                    "uri": "https://example.com/source",
+                }
+            },
+        ],
+        "searchEntryPoint": {
+            "renderedContent": (
+                '<a href="https://example.com/search">'
+                "<span>Latest pelican research</span></a>"
+            )
+        },
+    }
+
+    events = list(
+        model.process_candidates(
+            [{"content": {"parts": []}, "groundingMetadata": grounding}],
+            response=None,
+            options=options,
+        )
+    )
+
+    assert len(events) == 1
+    assert events[0].type == "text"
+    assert events[0].chunk == (
+        "\n\nGrounding Sources:\n"
+        "1. Example source: https://example.com/source\n\n"
+        "Google Search Suggestions:\n"
+        "Latest pelican research: https://example.com/search"
+    )
+    assert events[0].provider_metadata == {"gemini": {"groundingMetadata": grounding}}

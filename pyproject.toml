@@ -8,7 +8,6 @@ license = "Apache-2.0"
 classifiers = []
 dependencies = [
     "llm>=0.32",
-    "beautifulsoup4",
     "httpx",
     "ijson"
 ]

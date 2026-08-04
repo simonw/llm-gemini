@@ -1,7 +1,7 @@
-from bs4 import BeautifulSoup
 import click
 import copy
 from enum import Enum
+from html.parser import HTMLParser
 import httpx
 import ijson
 import json
@@ -17,6 +17,44 @@ from llm.parts import (
 import re
 from pydantic import Field, create_model
 from typing import Any, Dict, Optional
+
+
+class _SearchSuggestionParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.links = []
+        self._href = None
+        self._text = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "a":
+            self._href = dict(attrs).get("href")
+            self._text = []
+
+    def handle_data(self, data):
+        if self._href:
+            self._text.append(data)
+
+    def handle_endtag(self, tag):
+        if tag == "a" and self._href:
+            title = "".join(self._text).strip()
+            if title:
+                self.links.append((title, self._href))
+            self._href = None
+            self._text = []
+
+
+def _extract_search_suggestions(rendered_content):
+    parser = _SearchSuggestionParser()
+    parser.feed(rendered_content)
+    return parser.links
+
+
+def _format_link(title, url, use_osc8):
+    if use_osc8:
+        return f"\x1b]8;;{url}\a{title}\x1b]8;;\a"
+    return f"{title}: {url}"
+
 
 SAFETY_SETTINGS = [
     {
@@ -383,13 +421,6 @@ def _resolve_refs(schema, defs, expansion_stack=None):
             _resolve_refs(item, defs, expansion_stack)
 
 
-def format_link(osc8format, title, link):
-    if osc8format:
-        return f"\x1b]8;;{link}\a{title}\x1b]8;;\a"
-    else:
-        return f"{title}: {link}"
-
-
 class _SharedGemini:
     needs_key = "gemini"
     key_env_var = "LLM_GEMINI_KEY"
@@ -491,14 +522,14 @@ class _SharedGemini:
             extra_fields["grounding_links"] = (
                 Optional[bool],
                 Field(
-                    description="Whether to show grounding links from the response",
+                    description="Include grounding sources and search suggestions in the response",
                     default=True,
                 ),
             )
             extra_fields["format_links"] = (
                 Optional[bool],
                 Field(
-                    description="Whether to format grounding links and search recommendations with OSC 8 escape sequences",
+                    description="Format grounding links using OSC 8 terminal hyperlinks",
                     default=True,
                 ),
             )
@@ -569,8 +600,10 @@ class _SharedGemini:
                                 "args": part.arguments,
                             }
                         }
-                        sig = (part.provider_metadata or {}).get("gemini", {}).get(
-                            "thoughtSignature"
+                        sig = (
+                            (part.provider_metadata or {})
+                            .get("gemini", {})
+                            .get("thoughtSignature")
                         )
                         if sig:
                             fc_part["thoughtSignature"] = sig
@@ -738,9 +771,8 @@ class _SharedGemini:
                 thinking_level = thinking_level.value
             thinking_config["thinkingLevel"] = thinking_level
 
-        if (
-            (self.can_thinking_budget or self.thinking_levels)
-            and not getattr(prompt, "hide_reasoning", False)
+        if (self.can_thinking_budget or self.thinking_levels) and not getattr(
+            prompt, "hide_reasoning", False
         ):
             thinking_config["includeThoughts"] = True
 
@@ -841,42 +873,56 @@ class _SharedGemini:
                 tool_name="code_execution",
             )
 
-    def process_candidates(self, candidates, response):
+    def format_grounding(self, grounding, options):
+        if not getattr(options, "grounding_links", True):
+            return ""
+
+        use_osc8 = getattr(options, "format_links", True)
+        sources = []
+        seen_urls = set()
+        for chunk in grounding.get("groundingChunks", []):
+            web = chunk.get("web")
+            if not web or not web.get("uri") or web["uri"] in seen_urls:
+                continue
+            seen_urls.add(web["uri"])
+            sources.append((web.get("title") or web["uri"], web["uri"]))
+
+        rendered_content = grounding.get("searchEntryPoint", {}).get(
+            "renderedContent", ""
+        )
+        suggestions = (
+            _extract_search_suggestions(rendered_content) if rendered_content else []
+        )
+
+        sections = []
+        if sources:
+            source_lines = ["Grounding Sources:"]
+            source_lines.extend(
+                f"{index}. {_format_link(title, url, use_osc8)}"
+                for index, (title, url) in enumerate(sources, 1)
+            )
+            sections.append("\n".join(source_lines))
+        if suggestions:
+            suggestion_lines = ["Google Search Suggestions:"]
+            suggestion_lines.extend(
+                _format_link(title, url, use_osc8) for title, url in suggestions
+            )
+            sections.append("\n".join(suggestion_lines))
+
+        return "\n\n" + "\n\n".join(sections) if sections else ""
+
+    def process_candidates(self, candidates, response, options=None):
         # We only use the first candidate
-        for part in candidates[0]["content"]["parts"]:
+        candidate = candidates[0]
+        for part in candidate["content"]["parts"]:
             yield from self.process_part(part, response)
-
-    def process_grounding(self, event, options):
-        if not options or not self.can_google_search or not options.google_search:
-            return ""
-
-        try:
-            text = ""
-            grounding = event["candidates"][0]["groundingMetadata"]
-            if options.grounding_links and grounding:
-                chunks = grounding["groundingChunks"]
-                if chunks:
-                    text += "\n\nGrounding Sources:\n"
-                    for index, chunk in enumerate(chunks):
-                        if "web" in chunk:
-                            title = chunk["web"]["title"]
-                            href = chunk["web"]["uri"]
-                            text += f"{index + 1}. {format_link(options.format_links, title, href)}\n"
-                rendered_content = grounding["searchEntryPoint"]["renderedContent"]
-                if rendered_content:
-                    soup = BeautifulSoup(rendered_content, "html.parser")
-                    links = soup.find_all("a")
-                    if links:
-                        text += f"\nGoogle Search Suggestions:\n"
-                        for link in links:
-                            title = link.string
-                            href = link["href"]
-                            text += (
-                                f"{format_link(options.format_links, title, href)}\n"
-                            )
-            return text
-        except KeyError:
-            return ""
+        grounding = candidate.get("groundingMetadata")
+        if grounding:
+            yield StreamEvent(
+                type="text",
+                chunk=self.format_grounding(grounding, options),
+                provider_metadata={"gemini": {"groundingMetadata": grounding}},
+            )
 
     def set_usage(self, response):
         try:
@@ -927,13 +973,8 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
                             raise llm.ModelError(event["error"]["message"])
                         try:
                             yield from self.process_candidates(
-                                event["candidates"], response
+                                event["candidates"], response, prompt.options
                             )
-                            grounding_text = self.process_grounding(
-                                event, prompt.options
-                            )
-                            if grounding_text:
-                                yield StreamEvent(type="text", chunk=grounding_text)
                         except KeyError:
                             yield StreamEvent(type="text", chunk="")
                         gathered.append(event)
@@ -968,14 +1009,9 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                                 raise llm.ModelError(event["error"]["message"])
                             try:
                                 for stream_event in self.process_candidates(
-                                    event["candidates"], response
+                                    event["candidates"], response, prompt.options
                                 ):
                                     yield stream_event
-                                grounding_text = self.process_grounding(
-                                    event, prompt.options
-                                )
-                                if grounding_text:
-                                    yield StreamEvent(type="text", chunk=grounding_text)
                             except KeyError:
                                 yield StreamEvent(type="text", chunk="")
                             gathered.append(event)
