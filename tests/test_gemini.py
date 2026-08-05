@@ -1177,6 +1177,37 @@ class _NoLocalToolCallsResponse:
         raise AssertionError("Server-side tools must not be registered as local calls")
 
 
+@pytest.mark.parametrize("block_reason", ("PROHIBITED_CONTENT", "SAFETY"))
+def test_validate_response_event_raises_for_blocked_prompt(block_reason):
+    model = llm.get_model("gemini-3.6-flash")
+
+    with pytest.raises(
+        llm.ModelError, match=f"Gemini blocked the prompt: {block_reason}"
+    ):
+        model.validate_response_event(
+            {"promptFeedback": {"blockReason": block_reason}}
+        )
+
+
+def test_validate_response_event_allows_candidates():
+    model = llm.get_model("gemini-3.6-flash")
+    event = {
+        "candidates": [{"content": {"parts": [{"text": "Hello from Gemini"}]}}]
+    }
+
+    model.validate_response_event(event)
+    events = list(model.process_candidates(event["candidates"], response=None))
+
+    assert [event.chunk for event in events] == ["Hello from Gemini"]
+
+
+def test_validate_response_event_preserves_api_error_message():
+    model = llm.get_model("gemini-3.6-flash")
+
+    with pytest.raises(llm.ModelError, match="^Existing API error$"):
+        model.validate_response_event({"error": {"message": "Existing API error"}})
+
+
 def test_native_server_tool_call_and_response_events():
     model = llm.get_model("gemini-3.6-flash")
     raw_call = {

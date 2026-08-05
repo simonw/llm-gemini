@@ -959,6 +959,15 @@ class _SharedGemini:
 
         yield from events
 
+    def validate_response_event(self, event):
+        if not isinstance(event, dict):
+            return
+        if "error" in event:
+            raise llm.ModelError(event["error"]["message"])
+        block_reason = (event.get("promptFeedback") or {}).get("blockReason")
+        if block_reason:
+            raise llm.ModelError(f"Gemini blocked the prompt: {block_reason}")
+
     def set_usage(self, response):
         try:
             # Don't record the "content" key from that last candidate
@@ -1006,8 +1015,7 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
                 coro.send(chunk)
                 if events:
                     for event in events:
-                        if isinstance(event, dict) and "error" in event:
-                            raise llm.ModelError(event["error"]["message"])
+                        self.validate_response_event(event)
                         try:
                             yield from self.process_candidates(
                                 event["candidates"], response
@@ -1042,8 +1050,7 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                     coro.send(chunk)
                     if events:
                         for event in events:
-                            if isinstance(event, dict) and "error" in event:
-                                raise llm.ModelError(event["error"]["message"])
+                            self.validate_response_event(event)
                             try:
                                 for stream_event in self.process_candidates(
                                     event["candidates"], response
