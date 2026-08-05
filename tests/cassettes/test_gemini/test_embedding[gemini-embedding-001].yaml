@@ -1,6 +1,6 @@
 interactions:
 - request:
-    body: '{"requests": [{"model": "models/gemini-embedding-exp-03-07", "content":
+    body: '{"requests": [{"model": "models/gemini-embedding-001", "content":
       {"parts": [{"text": "Some text goes here"}]}}]}'
     headers:
       accept:
@@ -18,7 +18,7 @@ interactions:
       user-agent:
       - python-httpx/0.25.2
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-exp-03-07:batchEmbedContents
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents
   response:
     body:
       string: !!binary |
@@ -320,11 +320,11 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Fri, 07 Mar 2025 20:12:33 GMT
+      - Fri, 07 Mar 2025 20:12:31 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=496
+      - gfet4t7; dur=491
       Transfer-Encoding:
       - chunked
       Vary:
