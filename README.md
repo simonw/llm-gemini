@@ -55,7 +55,12 @@ NOTES = {
     "gemini/gemini-3.6-flash": "Gemini 3.6 Flash",
     "gemini/gemini-3.5-flash": "Gemini 3.5 Flash",
     "gemini/gemini-3.5-flash-lite": "Gemini 3.5 Flash Lite",
+    "gemini/gemini-3.1-flash-lite": "Gemini 3.1 Flash Lite",
+    "gemini/gemma-4-31b-it": "Gemma 4 31B Instruct",
+    "gemini/gemma-4-26b-a4b-it": "Gemma 4 26B-A4B Instruct",
+    "gemini/gemini-3.1-flash-lite-preview": "Gemini 3.1 Flash Lite Preview",
     "gemini/gemini-3.1-pro-preview": "Gemini 3.1 Pro Preview",
+    "gemini/gemini-3-flash-preview": "Gemini 3 Flash Preview",
     "gemini/gemini-flash-latest": "Latest Gemini Flash",
     "gemini/gemini-flash-lite-latest": "Latest Gemini Flash Lite",
     "gemini/gemini-2.5-flash": "Gemini 2.5 Flash",
@@ -74,13 +79,13 @@ cog.out("\n".join(to_output))
 - `gemini/gemini-3.5-flash-lite`: Gemini 3.5 Flash Lite
 - `gemini/gemini-3.6-flash`: Gemini 3.6 Flash
 - `gemini/gemini-3.5-flash`: Gemini 3.5 Flash
-- `gemini/gemini-3.1-flash-lite`
-- `gemini/gemma-4-31b-it`
-- `gemini/gemma-4-26b-a4b-it`
-- `gemini/gemini-3.1-flash-lite-preview`
+- `gemini/gemini-3.1-flash-lite`: Gemini 3.1 Flash Lite
+- `gemini/gemma-4-31b-it`: Gemma 4 31B Instruct
+- `gemini/gemma-4-26b-a4b-it`: Gemma 4 26B-A4B Instruct
+- `gemini/gemini-3.1-flash-lite-preview`: Gemini 3.1 Flash Lite Preview
 - `gemini/gemini-3.1-pro-preview-customtools`
 - `gemini/gemini-3.1-pro-preview`: Gemini 3.1 Pro Preview
-- `gemini/gemini-3-flash-preview`
+- `gemini/gemini-3-flash-preview`: Gemini 3 Flash Preview
 - `gemini/gemini-flash-lite-latest`: Latest Gemini Flash Lite
 - `gemini/gemini-flash-latest`: Latest Gemini Flash
 - `gemini/gemini-2.5-flash`: Gemini 2.5 Flash
