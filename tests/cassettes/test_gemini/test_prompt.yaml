@@ -1,10 +1,7 @@
 interactions:
 - request:
-    body: '{"contents": [{"role": "user", "parts": [{"text": "Name for a pet pelican,
-      just the name"}]}], "safetySettings": [{"category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-      "threshold": "BLOCK_NONE"}, {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-      "threshold": "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold":
-      "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"}]}'
+    body: '{"contents":[{"role":"user","parts":[{"text":"Name for a pet pelican, just
+      the name"}]}],"safetySettings":[{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}],"generationConfig":{"thinkingConfig":{"includeThoughts":true}}}'
     headers:
       accept:
       - '*/*'
@@ -13,26 +10,50 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '405'
+      - '446'
       content-type:
       - application/json
       host:
       - generativelanguage.googleapis.com
       user-agent:
-      - python-httpx/0.25.2
+      - python-httpx/0.28.1
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:streamGenerateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:streamGenerateContent
   response:
     body:
       string: !!binary |
-        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
+        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
+        IOVvAAAA//+KBQAAAP//AwBgGRB75w0AAA==
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
@@ -41,73 +62,11 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Mon, 17 Feb 2025 05:16:14 GMT
+      - Wed, 05 Aug 2026 00:56:03 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=284
-      Transfer-Encoding:
-      - chunked
-      Vary:
-      - Origin
-      - X-Origin
-      - Referer
-      X-Content-Type-Options:
-      - nosniff
-      X-Frame-Options:
-      - SAMEORIGIN
-      X-XSS-Protection:
-      - '0'
-    status:
-      code: 200
-      message: OK
-- request:
-    body: '{"contents": [{"role": "user", "parts": [{"text": "Name for a pet pelican,
-      just the name"}]}], "safetySettings": [{"category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-      "threshold": "BLOCK_NONE"}, {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-      "threshold": "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold":
-      "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"}]}'
-    headers:
-      accept:
-      - '*/*'
-      accept-encoding:
-      - gzip, deflate
-      connection:
-      - keep-alive
-      content-length:
-      - '405'
-      content-type:
-      - application/json
-      host:
-      - generativelanguage.googleapis.com
-      user-agent:
-      - python-httpx/0.25.2
-    method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:streamGenerateContent
-  response:
-    body:
-      string: !!binary |
-        H4sIAAAAAAAC/1yQTwvCMAzF7/sUJWcn7uDFq2fBg3gZHsIWZ7FrRpuBMvbdbTv2B3sI4b1fX0LK
-        IVMKKrS1rlHIw0mVQVFqSDV6bIWsBGOWgtihk5Wd3rDpAyL0iZ/gSq76wsYbl/6xWxMdG4p4yzWZ
-        GZ/QWBMKvceGLiQYdsVlI+gct53c+E32zH3atThM2SAsaP6s4IwpLw27k/OabRzeUKutzov9MX8a
-        9K/cxJsIZGP2AwAA//+8VD0PgjAQ3U38E8wssjlWuABJ+UhbEkgkTUkASQgmwsLgf7cqSIk6SNTt
-        muvde+96r/p69fNR7ZulcxovaIXk3x5ILtq7IsqCUHtkW1HkXU9EVzXlnJPKSGrs8vJ46q8NHEQ8
-        biIGdkAS7siA0xDAdDRdLZFPkImsqqvuVuWDjV3b3WGYFJ31T9Es5NtAgohyM/AZ+OwPmPKEKPX+
-        A0YhjhDGCYc4xK7pLsAconSxU7aDUabFnqWN9z7a6E9NW0tCVrW6W4oV5M6KUQyDWFUr+6ucZv5P
-        XzP8EpYxx1ryN1wAAAD//4oFAAAA//8DAOHmBKtGBQAA
-    headers:
-      Alt-Svc:
-      - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
-      Content-Encoding:
-      - gzip
-      Content-Type:
-      - application/json; charset=UTF-8
-      Date:
-      - Mon, 17 Feb 2025 05:16:14 GMT
-      Server:
-      - scaffolding on HTTPServer2
-      Server-Timing:
-      - gfet4t7; dur=272
+      - gfet4t7; dur=1671
       Transfer-Encoding:
       - chunked
       Vary:

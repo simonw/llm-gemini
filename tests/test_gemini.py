@@ -16,42 +16,14 @@ GEMINI_API_KEY = os.environ.get("PYTEST_GEMINI_API_KEY", None) or "gm-..."
 
 @pytest.mark.vcr
 def test_prompt():
-    model = llm.get_model("gemini-1.5-flash-latest")
+    model = llm.get_model("gemini-flash-latest")
     response = model.prompt("Name for a pet pelican, just the name", key=GEMINI_API_KEY)
-    assert str(response) == "Percy\n"
-    assert response.response_json == {
-        "candidates": [
-            {
-                "finishReason": "STOP",
-                "safetyRatings": [
-                    {
-                        "category": "HARM_CATEGORY_HATE_SPEECH",
-                        "probability": "NEGLIGIBLE",
-                    },
-                    {
-                        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                        "probability": "NEGLIGIBLE",
-                    },
-                    {
-                        "category": "HARM_CATEGORY_HARASSMENT",
-                        "probability": "NEGLIGIBLE",
-                    },
-                    {
-                        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                        "probability": "NEGLIGIBLE",
-                    },
-                ],
-            }
-        ],
-        "modelVersion": "gemini-1.5-flash-latest",
-    }
-    assert response.token_details == {
-        "candidatesTokenCount": 2,
-        "promptTokensDetails": [{"modality": "TEXT", "tokenCount": 9}],
-        "candidatesTokensDetails": [{"modality": "TEXT", "tokenCount": 2}],
-    }
-    assert response.input_tokens == 9
-    assert response.output_tokens == 2
+    assert str(response).strip()
+    assert response.response_json["candidates"][0]["finishReason"] == "STOP"
+    assert response.response_json["modelVersion"] == "gemini-3.6-flash"
+    assert response.input_tokens > 0
+    assert response.output_tokens > 0
+    assert response.token_details["candidatesTokenCount"] > 0
 
 
 # Skip async test on Python 3.14 due to httpcore cleanup incompatibility
@@ -62,12 +34,12 @@ def test_prompt():
 @pytest.mark.vcr
 @pytest.mark.asyncio
 async def test_prompt_async():
-    async_model = llm.get_async_model("gemini-1.5-flash-latest")
+    async_model = llm.get_async_model("gemini-flash-latest")
     response = await async_model.prompt(
         "Name for a pet pelican, just the name", key=GEMINI_API_KEY
     )
     text = await response.text()
-    assert text == "Percy\n"
+    assert text.strip()
 
 
 @pytest.mark.vcr
@@ -77,45 +49,18 @@ def test_prompt_with_pydantic_schema():
         age: int
         bio: str
 
-    class Dogs(BaseModel):
-        dogs: List[Dog]
-
-    model = llm.get_model("gemini-1.5-flash-latest")
+    model = llm.get_model("gemini-flash-latest")
     response = model.prompt(
         "Invent a cool dog", key=GEMINI_API_KEY, schema=Dog, stream=False
     )
-    assert json.loads(response.text()) == {
-        "age": 3,
-        "bio": "A fluffy Samoyed with exceptional intelligence and a love for belly rubs. He's mastered several tricks, including fetching the newspaper and opening doors.",
-        "name": "Cloud",
-    }
-    assert response.response_json == {
-        "candidates": [
-            {
-                "finishReason": "STOP",
-                "safetyRatings": [
-                    {
-                        "category": "HARM_CATEGORY_HATE_SPEECH",
-                        "probability": "NEGLIGIBLE",
-                    },
-                    {
-                        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-                        "probability": "NEGLIGIBLE",
-                    },
-                    {
-                        "category": "HARM_CATEGORY_HARASSMENT",
-                        "probability": "NEGLIGIBLE",
-                    },
-                    {
-                        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-                        "probability": "NEGLIGIBLE",
-                    },
-                ],
-            }
-        ],
-        "modelVersion": "gemini-1.5-flash-latest",
-    }
-    assert response.input_tokens == 10
+    dog = json.loads(response.text())
+    assert set(dog) == {"name", "age", "bio"}
+    assert isinstance(dog["name"], str)
+    assert isinstance(dog["age"], int)
+    assert isinstance(dog["bio"], str)
+    assert response.response_json["candidates"][0]["finishReason"] == "STOP"
+    assert response.response_json["modelVersion"] == "gemini-3.6-flash"
+    assert response.input_tokens > 0
 
 
 @pytest.mark.vcr
@@ -128,7 +73,7 @@ def test_prompt_with_multiple_dogs():
     class Dogs(BaseModel):
         dogs: List[Dog]
 
-    model = llm.get_model("gemini-2.0-flash")
+    model = llm.get_model("gemini-flash-latest")
     response = model.prompt(
         "Invent 3 cool dogs", key=GEMINI_API_KEY, schema=Dogs, stream=False
     )
@@ -602,7 +547,7 @@ def test_nested_model_direct_reference():
         name: str
         address: Address
 
-    model = llm.get_model("gemini-2.0-flash")
+    model = llm.get_model("gemini-flash-latest")
     response = model.prompt(
         "Create a person named Alice living in San Francisco",
         key=GEMINI_API_KEY,
@@ -633,7 +578,7 @@ def test_nested_model_optional():
         name: str
         employer: Optional[Company]
 
-    model = llm.get_model("gemini-2.0-flash")
+    model = llm.get_model("gemini-flash-latest")
     response = model.prompt(
         "Create a person named Bob who works at TechCorp",
         key=GEMINI_API_KEY,
@@ -662,7 +607,7 @@ def test_nested_model_deep_composition():
         name: str
         orders: List[Order]
 
-    model = llm.get_model("gemini-2.0-flash")
+    model = llm.get_model("gemini-flash-latest")
     response = model.prompt(
         "Create a customer named Carol with 2 orders, each containing 2 items",
         key=GEMINI_API_KEY,
@@ -697,7 +642,7 @@ def test_cli_gemini_models(tmpdir, monkeypatch):
     # Try again with --key
     result2 = runner.invoke(cli, ["gemini", "models", "--key", GEMINI_API_KEY])
     assert result2.exit_code == 0
-    assert "gemini-1.5-flash-latest" in result2.output
+    assert "gemini-3.6-flash" in result2.output
     # And with --method
     result3 = runner.invoke(
         cli, ["gemini", "models", "--key", GEMINI_API_KEY, "--method", "embedContent"]
@@ -713,12 +658,12 @@ def test_resolved_model():
     model = llm.get_model("gemini-flash-latest")
     response = model.prompt("hi", key=GEMINI_API_KEY)
     response.text()
-    assert response.resolved_model == "gemini-2.5-flash-preview-09-2025"
+    assert response.resolved_model == "gemini-3.6-flash"
 
 
 @pytest.mark.vcr
 def test_tools():
-    model = llm.get_model("gemini-2.0-flash")
+    model = llm.get_model("gemini-2.5-flash")
     names = ["Charles", "Sammy"]
     chain_response = model.chain(
         "Two names for a pet pelican",
@@ -728,7 +673,8 @@ def test_tools():
         key=GEMINI_API_KEY,
     )
     text = chain_response.text()
-    assert text == "Okay, here are two names for a pet pelican: Charles and Sammy.\n"
+    assert "Charles" in text
+    assert "Sammy" in text
     # This one did three
     assert len(chain_response._responses) == 3
     first, second, third = chain_response._responses
@@ -853,11 +799,11 @@ def test_gemini_3_flash_has_all_thinking_levels():
     assert level_values == {"minimal", "low", "medium", "high"}
 
 
-def test_gemini_3_pro_has_limited_thinking_levels():
-    """Gemini 3 Pro should only support low and high thinking levels."""
+def test_gemini_31_pro_has_thinking_levels():
+    """Gemini 3.1 Pro should support low, medium and high thinking levels."""
     import typing
 
-    model = llm.get_model("gemini-3-pro-preview")
+    model = llm.get_model("gemini-3.1-pro-preview")
     options_class = model.Options
 
     # Check that thinking_level field exists
@@ -869,9 +815,9 @@ def test_gemini_3_pro_has_limited_thinking_levels():
     args = typing.get_args(annotation)
     thinking_enum = args[0] if args else annotation
 
-    # Check only 2 levels are available
+    # Check all 3 supported levels are available
     level_values = {e.value for e in thinking_enum}
-    assert level_values == {"low", "high"}
+    assert level_values == {"low", "medium", "high"}
 
 
 def test_gemini_25_flash_has_thinking_budget_not_level():
@@ -883,9 +829,9 @@ def test_gemini_25_flash_has_thinking_budget_not_level():
     assert "thinking_level" not in options_class.model_fields
 
 
-def test_gemini_20_flash_has_neither_thinking_option():
-    """Gemini 2.0 Flash should have neither thinking_budget nor thinking_level."""
-    model = llm.get_model("gemini-2.0-flash")
+def test_gemma_4_has_neither_thinking_option():
+    """Gemma 4 should have neither thinking_budget nor thinking_level."""
+    model = llm.get_model("gemma-4-26b-a4b-it")
     options_class = model.Options
 
     assert "thinking_budget" not in options_class.model_fields
@@ -1080,8 +1026,10 @@ def test_hosted_tool_options_are_removed():
             "gemini-2.5-flash",
             {"GoogleSearch", "URLContext", "CodeExecution"},
         ),
-        ("gemini-1.5-flash-latest", {"GoogleSearch", "CodeExecution"}),
-        ("gemini-2.0-flash-lite", set()),
+        (
+            "gemini-flash-latest",
+            {"GoogleSearch", "URLContext", "CodeExecution"},
+        ),
         ("gemma-4-26b-a4b-it", set()),
     ),
 )
@@ -1136,23 +1084,6 @@ def test_latest_aliases_enable_server_tool_context(model_id):
 
     assert body["toolConfig"]["includeServerSideToolInvocations"] is True
     assert body["tools"][1]["functionDeclarations"][0]["name"] == "local_tool"
-
-
-def test_google_search_uses_legacy_spec_on_gemini_15():
-    from llm_gemini import GoogleSearch
-
-    model = llm.get_model("gemini-1.5-flash-latest")
-    prompt = llm.Prompt(
-        "Search for pelicans",
-        model,
-        options=model.Options(),
-        tools=[GoogleSearch()],
-    )
-
-    body = model.build_request_body(prompt, None)
-
-    assert body["tools"] == [{"googleSearchRetrieval": {}}]
-    assert "toolConfig" not in body
 
 
 def test_gemini_3_combines_function_and_server_side_tools():

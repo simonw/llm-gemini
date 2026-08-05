@@ -41,28 +41,9 @@ SAFETY_SETTINGS = [
 
 # https://cloud.google.com/vertex-ai/generative-ai/docs/multimodal/ground-gemini#supported_models_2
 GOOGLE_SEARCH_MODELS = {
-    "gemini-1.5-pro-latest",
-    "gemini-1.5-flash-latest",
-    "gemini-1.5-pro-001",
-    "gemini-1.5-flash-001",
-    "gemini-1.5-pro-002",
-    "gemini-1.5-flash-002",
-    "gemini-2.0-flash-exp",
-    "gemini-2.0-flash",
-    "gemini-2.5-pro-preview-03-25",
-    "gemini-2.5-pro-exp-03-25",
-    "gemini-2.5-flash-preview-04-17",
-    "gemini-2.5-pro-preview-05-06",
-    "gemini-2.5-flash-preview-05-20",
-    "gemini-2.5-pro-preview-06-05",
-    "gemini-2.5-pro",
     "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
     "gemini-flash-latest",
     "gemini-flash-lite-latest",
-    "gemini-2.5-flash-preview-09-2025",
-    "gemini-2.5-flash-lite-preview-09-2025",
-    "gemini-3-pro-preview",
     "gemini-3-flash-preview",
     "gemini-3.1-pro-preview",
     "gemini-3.1-pro-preview-customtools",
@@ -71,17 +52,6 @@ GOOGLE_SEARCH_MODELS = {
     "gemini-3.5-flash",
     "gemini-3.6-flash",
     "gemini-3.5-flash-lite",
-}
-
-# Older Google models used google_search_retrieval instead of google_search
-GOOGLE_SEARCH_MODELS_USING_SEARCH_RETRIEVAL = {
-    "gemini-1.5-pro-latest",
-    "gemini-1.5-flash-latest",
-    "gemini-1.5-pro-001",
-    "gemini-1.5-flash-001",
-    "gemini-1.5-pro-002",
-    "gemini-1.5-flash-002",
-    "gemini-2.0-flash-exp",
 }
 
 
@@ -93,9 +63,7 @@ def _supports_url_context(model_id):
 
 
 def _supports_code_execution(model_id):
-    if model_id.startswith("gemini-2.0-flash-lite"):
-        return False
-    return model_id.startswith(("gemini-1.5", "gemini-2", "gemini-3", "gemini-flash"))
+    return model_id.startswith(("gemini-2.5", "gemini-3", "gemini-flash"))
 
 
 def _supports_server_tool_context(model_id):
@@ -123,8 +91,6 @@ class GoogleSearch(llm.ServerSideTool):
         super().__init__()
 
     def tool_spec(self, model):
-        if model.gemini_model_id in GOOGLE_SEARCH_MODELS_USING_SEARCH_RETRIEVAL:
-            return {"googleSearchRetrieval": {}}
         return {"googleSearch": {}}
 
     def prepare_request(self, model, body):
@@ -182,27 +148,14 @@ def _native_part_metadata(part):
 
 
 THINKING_BUDGET_MODELS = {
-    "gemini-2.0-flash-thinking-exp-01-21",
-    "gemini-2.0-flash-thinking-exp-1219",
-    "gemini-2.5-flash-preview-04-17",
-    "gemini-2.5-pro-exp-03-25",
-    "gemini-2.5-pro-preview-03-25",
-    "gemini-2.5-pro-preview-05-06",
-    "gemini-2.5-flash-preview-05-20",
-    "gemini-2.5-pro-preview-06-05",
-    "gemini-2.5-pro",
     "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
     "gemini-flash-latest",
     "gemini-flash-lite-latest",
-    "gemini-2.5-flash-preview-09-2025",
-    "gemini-2.5-flash-lite-preview-09-2025",
 }
 
 # Model-specific thinking levels - models not listed here don't support thinking_level
 MODEL_THINKING_LEVELS = {
     "gemini-3-flash-preview": ["minimal", "low", "medium", "high"],
-    "gemini-3-pro-preview": ["low", "high"],
     "gemini-3.1-pro-preview": ["low", "medium", "high"],
     "gemini-3.1-pro-preview-customtools": ["low", "medium", "high"],
     "gemini-3.1-flash-lite-preview": ["minimal", "low", "medium", "high"],
@@ -210,16 +163,6 @@ MODEL_THINKING_LEVELS = {
     "gemini-3.5-flash": ["minimal", "low", "medium", "high"],
     "gemini-3.6-flash": ["minimal", "low", "medium", "high"],
     "gemini-3.5-flash-lite": ["minimal", "low", "medium", "high"],
-}
-
-NO_VISION_MODELS = {"gemma-3-1b-it", "gemma-3n-e4b-it"}
-
-NO_MEDIA_RESOLUTION_MODELS = {
-    "gemma-3-1b-it",
-    "gemma-3-4b-it",
-    "gemma-3-12b-it",
-    "gemma-3-27b-it",
-    "gemma-3n-e4b-it",
 }
 
 
@@ -274,56 +217,10 @@ ATTACHMENT_TYPES = {
 def register_models(register):
     # Register both sync and async versions of each model
     for model_id in (
-        "gemini-pro",
-        "gemini-1.5-pro-latest",
-        "gemini-1.5-flash-latest",
-        "gemini-1.5-pro-001",
-        "gemini-1.5-flash-001",
-        "gemini-1.5-pro-002",
-        "gemini-1.5-flash-002",
-        "gemini-1.5-flash-8b-latest",
-        "gemini-1.5-flash-8b-001",
-        "gemini-exp-1114",
-        "gemini-exp-1121",
-        "gemini-exp-1206",
-        "gemini-2.0-flash-exp",
-        "learnlm-1.5-pro-experimental",
-        # Gemma 3 models:
-        "gemma-3-1b-it",
-        "gemma-3-4b-it",
-        "gemma-3-12b-it",  # 12th March 2025
-        "gemma-3-27b-it",
-        "gemma-3n-e4b-it",  # 20th May 2025
-        "gemini-2.0-flash-thinking-exp-1219",
-        "gemini-2.0-flash-thinking-exp-01-21",
-        # Released 5th Feb 2025:
-        "gemini-2.0-flash",
-        "gemini-2.0-pro-exp-02-05",
-        # Released 25th Feb 2025:
-        "gemini-2.0-flash-lite",
-        # 25th March 2025:
-        "gemini-2.5-pro-exp-03-25",
-        # 4th April 2025 (paid):
-        "gemini-2.5-pro-preview-03-25",
-        # 17th April 2025:
-        "gemini-2.5-flash-preview-04-17",
-        # 6th May 2025:
-        "gemini-2.5-pro-preview-05-06",
-        # 20th May 2025:
-        "gemini-2.5-flash-preview-05-20",
-        # 5th June 2025:
-        "gemini-2.5-pro-preview-06-05",
         "gemini-2.5-flash",
-        "gemini-2.5-pro",
-        # 22nd July 2025:
-        "gemini-2.5-flash-lite",
-        # 25th Spetember 2025:
+        # 25th September 2025:
         "gemini-flash-latest",
         "gemini-flash-lite-latest",
-        "gemini-2.5-flash-preview-09-2025",
-        "gemini-2.5-flash-lite-preview-09-2025",
-        # 18th November 2025:
-        "gemini-3-pro-preview",
         # 17th December 2025:
         "gemini-3-flash-preview",
         # 19th February 2026
@@ -336,7 +233,7 @@ def register_models(register):
         "gemma-4-31b-it",
         # 7th May 2026
         "gemini-3.1-flash-lite",
-        # 19th Mary 2026
+        # 19th May 2026
         "gemini-3.5-flash",
         # 21st July 2026
         "gemini-3.6-flash",
@@ -347,31 +244,24 @@ def register_models(register):
         can_code_execution = _supports_code_execution(model_id)
         can_thinking_budget = model_id in THINKING_BUDGET_MODELS
         thinking_levels = MODEL_THINKING_LEVELS.get(model_id)
-        can_vision = model_id not in NO_VISION_MODELS
-        can_schema = "flash-thinking" not in model_id and "gemma-3" not in model_id
-        can_media_resolution = model_id not in NO_MEDIA_RESOLUTION_MODELS
         register(
             GeminiPro(
                 model_id,
-                can_vision=can_vision,
                 can_google_search=can_google_search,
                 can_url_context=can_url_context,
                 can_code_execution=can_code_execution,
                 can_thinking_budget=can_thinking_budget,
                 thinking_levels=thinking_levels,
-                can_schema=can_schema,
-                can_media_resolution=can_media_resolution,
+                can_schema=True,
             ),
             AsyncGeminiPro(
                 model_id,
-                can_vision=can_vision,
                 can_google_search=can_google_search,
                 can_url_context=can_url_context,
                 can_code_execution=can_code_execution,
                 can_thinking_budget=can_thinking_budget,
                 thinking_levels=thinking_levels,
-                can_schema=can_schema,
-                can_media_resolution=can_media_resolution,
+                can_schema=True,
             ),
             aliases=(model_id,),
         )

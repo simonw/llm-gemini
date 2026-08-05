@@ -24,10 +24,10 @@ llm keys set gemini
 ```
 You can also set the API key by assigning it to the environment variable `LLM_GEMINI_KEY`.
 
-Now run the model using `-m gemini-2.0-flash`, for example:
+Now run the model using `-m gemini-flash-latest`, for example:
 
 ```bash
-llm -m gemini-2.0-flash "A short joke about a pelican and a walrus"
+llm -m gemini-flash-latest "A short joke about a pelican and a walrus"
 ```
 
 > A pelican and a walrus are sitting at a bar. The pelican orders a fishbowl cocktail, and the walrus orders a plate of clams. The bartender asks, "So, what brings you two together?"
@@ -37,7 +37,7 @@ llm -m gemini-2.0-flash "A short joke about a pelican and a walrus"
 You can set the [default model](https://llm.datasette.io/en/stable/setup.html#setting-a-custom-default-model) to avoid the extra `-m` option:
 
 ```bash
-llm models default gemini-2.0-flash
+llm models default gemini-flash-latest
 llm "A joke about a pelican and a walrus"
 ```
 
@@ -52,17 +52,13 @@ result = runner.invoke(cli.cli, ["models", "-q", "gemini/"])
 lines = reversed(result.output.strip().split("\n"))
 to_output = []
 NOTES = {
+    "gemini/gemini-3.6-flash": "Gemini 3.6 Flash",
+    "gemini/gemini-3.5-flash": "Gemini 3.5 Flash",
+    "gemini/gemini-3.5-flash-lite": "Gemini 3.5 Flash Lite",
     "gemini/gemini-3.1-pro-preview": "Gemini 3.1 Pro Preview",
-    "gemini/gemini-3-pro-preview": "Gemini 3 Pro Preview",
     "gemini/gemini-flash-latest": "Latest Gemini Flash",
     "gemini/gemini-flash-lite-latest": "Latest Gemini Flash Lite",
     "gemini/gemini-2.5-flash": "Gemini 2.5 Flash",
-    "gemini/gemini-2.5-pro": "Gemini 2.5 Pro",
-    "gemini/gemini-2.5-flash": "Gemini 2.5 Flash",
-    "gemini/gemini-2.5-flash-lite": "Gemini 2.5 Flash Lite",
-    "gemini/gemini-2.5-flash-preview-05-20": "Gemini 2.5 Flash preview (priced differently from 2.5 Flash)",
-    "gemini/gemini-2.0-flash-thinking-exp-01-21": "Experimental \"thinking\" model from January 2025",
-    "gemini/gemini-1.5-flash-8b-latest": "The least expensive model",
 }
 for line in lines:
     model_id, rest = line.split(None, 2)[1:]
@@ -75,9 +71,9 @@ for line in lines:
     )
 cog.out("\n".join(to_output))
 ]]] -->
-- `gemini/gemini-3.5-flash-lite`
-- `gemini/gemini-3.6-flash`
-- `gemini/gemini-3.5-flash`
+- `gemini/gemini-3.5-flash-lite`: Gemini 3.5 Flash Lite
+- `gemini/gemini-3.6-flash`: Gemini 3.6 Flash
+- `gemini/gemini-3.5-flash`: Gemini 3.5 Flash
 - `gemini/gemini-3.1-flash-lite`
 - `gemini/gemma-4-31b-it`
 - `gemini/gemma-4-26b-a4b-it`
@@ -85,50 +81,15 @@ cog.out("\n".join(to_output))
 - `gemini/gemini-3.1-pro-preview-customtools`
 - `gemini/gemini-3.1-pro-preview`: Gemini 3.1 Pro Preview
 - `gemini/gemini-3-flash-preview`
-- `gemini/gemini-3-pro-preview`: Gemini 3 Pro Preview
-- `gemini/gemini-2.5-flash-lite-preview-09-2025`
-- `gemini/gemini-2.5-flash-preview-09-2025`
 - `gemini/gemini-flash-lite-latest`: Latest Gemini Flash Lite
 - `gemini/gemini-flash-latest`: Latest Gemini Flash
-- `gemini/gemini-2.5-flash-lite`: Gemini 2.5 Flash Lite
-- `gemini/gemini-2.5-pro`: Gemini 2.5 Pro
 - `gemini/gemini-2.5-flash`: Gemini 2.5 Flash
-- `gemini/gemini-2.5-pro-preview-06-05`
-- `gemini/gemini-2.5-flash-preview-05-20`: Gemini 2.5 Flash preview (priced differently from 2.5 Flash)
-- `gemini/gemini-2.5-pro-preview-05-06`
-- `gemini/gemini-2.5-flash-preview-04-17`
-- `gemini/gemini-2.5-pro-preview-03-25`
-- `gemini/gemini-2.5-pro-exp-03-25`
-- `gemini/gemini-2.0-flash-lite`
-- `gemini/gemini-2.0-pro-exp-02-05`
-- `gemini/gemini-2.0-flash`
-- `gemini/gemini-2.0-flash-thinking-exp-01-21`: Experimental "thinking" model from January 2025
-- `gemini/gemini-2.0-flash-thinking-exp-1219`
-- `gemini/gemma-3n-e4b-it`
-- `gemini/gemma-3-27b-it`
-- `gemini/gemma-3-12b-it`
-- `gemini/gemma-3-4b-it`
-- `gemini/gemma-3-1b-it`
-- `gemini/learnlm-1.5-pro-experimental`
-- `gemini/gemini-2.0-flash-exp`
-- `gemini/gemini-exp-1206`
-- `gemini/gemini-exp-1121`
-- `gemini/gemini-exp-1114`
-- `gemini/gemini-1.5-flash-8b-001`
-- `gemini/gemini-1.5-flash-8b-latest`: The least expensive model
-- `gemini/gemini-1.5-flash-002`
-- `gemini/gemini-1.5-pro-002`
-- `gemini/gemini-1.5-flash-001`
-- `gemini/gemini-1.5-pro-001`
-- `gemini/gemini-1.5-flash-latest`
-- `gemini/gemini-1.5-pro-latest`
-- `gemini/gemini-pro`
 <!-- [[[end]]] -->
 
 All of these models have aliases that omit the `gemini/` prefix, for example:
 
 ```bash
-llm -m gemini-1.5-flash-8b-latest --schema 'name,age int,bio' 'invent a dog'
+llm -m gemini-flash-latest --schema 'name,age int,bio' 'invent a dog'
 ```
 
 ### Images, audio and video
@@ -136,23 +97,23 @@ llm -m gemini-1.5-flash-8b-latest --schema 'name,age int,bio' 'invent a dog'
 Gemini models are multi-modal. You can provide images, audio or video files as input like this:
 
 ```bash
-llm -m gemini-2.0-flash 'extract text' -a image.jpg
+llm -m gemini-flash-latest 'extract text' -a image.jpg
 ```
 Or with a URL:
 ```bash
-llm -m gemini-2.0-flash-lite 'describe image' \
+llm -m gemini-flash-latest 'describe image' \
   -a https://static.simonwillison.net/static/2024/pelicans.jpg
 ```
 Audio works too:
 
 ```bash
-llm -m gemini-2.0-flash 'transcribe audio' -a audio.mp3
+llm -m gemini-flash-latest 'transcribe audio' -a audio.mp3
 ```
 
 And video:
 
 ```bash
-llm -m gemini-2.0-flash 'describe what happens' -a video.mp4
+llm -m gemini-flash-latest 'describe what happens' -a video.mp4
 ```
 The Gemini prompting guide includes [extensive advice](https://ai.google.dev/gemini-api/docs/file-prompting-strategies) on multi-modal prompting.
 
@@ -161,7 +122,7 @@ The Gemini prompting guide includes [extensive advice](https://ai.google.dev/gem
 You can provide YouTube video URLs as attachments as well:
 
 ```bash
-llm -m gemini-3-pro-preview -a 'https://www.youtube.com/watch?v=9o1_DL9uNlM' \
+llm -m gemini-flash-latest -a 'https://www.youtube.com/watch?v=9o1_DL9uNlM' \
   'Produce a summary with relevant URLs and code example snippets, then an accurate transcript with timestamps.'
 ```
 [Example output here](https://gist.github.com/simonw/1b07aafb2bfc112b180ab68c864511cb).
@@ -173,7 +134,7 @@ These will be processed with media resolution `low` by default. You can use the 
 Use `-o json_object 1` to force the output to be JSON:
 
 ```bash
-llm -m gemini-2.0-flash -o json_object 1 \
+llm -m gemini-flash-latest -o json_object 1 \
   '3 largest cities in California, list of {"name": "..."}'
 ```
 Outputs:
@@ -237,7 +198,7 @@ The `"toolUsePromptTokenCount"` key shows how many tokens were used for that URL
 To chat interactively with the model, run `llm chat`:
 
 ```bash
-llm chat -m gemini-2.0-flash
+llm chat -m gemini-flash-latest
 ```
 
 ### Timeouts
@@ -247,13 +208,13 @@ By default there is no `timeout` against the Gemini API. You can use the `timeou
 With the CLI tool that looks like this, to set a 1.5 second timeout:
 
 ```bash
-llm -m gemini-2.5-flash-preview-05-20 'epic saga about mice' -o timeout 1.5
+llm -m gemini-flash-latest 'epic saga about mice' -o timeout 1.5
 ```
 In the Python library timeouts are used like this:
 ```python
 import httpx, llm
 
-model = llm.get_model("gemini/gemini-2.5-flash-preview-05-20")
+model = llm.get_model("gemini/gemini-flash-latest")
 
 try:
     response = model.prompt(

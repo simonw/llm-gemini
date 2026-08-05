@@ -1,15 +1,8 @@
 interactions:
 - request:
-    body: '{"contents": [{"role": "user", "parts": [{"text": "Create a person named
-      Bob who works at TechCorp"}]}], "safetySettings": [{"category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-      "threshold": "BLOCK_NONE"}, {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-      "threshold": "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold":
-      "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"}],
-      "generationConfig": {"response_mime_type": "application/json", "response_schema":
-      {"properties": {"name": {"title": "Name", "type": "string"}, "employer": {"anyOf":
-      [{"properties": {"company_name": {"title": "Company Name", "type": "string"}},
-      "required": ["company_name"], "title": "Company", "type": "object"}, {"type":
-      "null"}]}}, "required": ["name", "employer"], "type": "object"}}}'
+    body: '{"contents":[{"role":"user","parts":[{"text":"Create a person named Bob
+      who works at TechCorp"}]}],"safetySettings":[{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}],"generationConfig":{"response_mime_type":"application/json","response_schema":{"properties":{"name":{"title":"Name","type":"string"},"employer":{"anyOf":[{"properties":{"company_name":{"title":"Company
+      Name","type":"string"}},"required":["company_name"],"title":"Company","type":"object"},{"type":"null"}]}},"required":["name","employer"],"type":"object"},"thinkingConfig":{"includeThoughts":true}}}'
     headers:
       accept:
       - '*/*'
@@ -18,28 +11,61 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '803'
+      - '792'
       content-type:
       - application/json
       host:
       - generativelanguage.googleapis.com
       user-agent:
-      - python-httpx/0.25.2
+      - python-httpx/0.28.1
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:streamGenerateContent
   response:
     body:
       string: !!binary |
-        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
+        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
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
@@ -48,11 +74,11 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Sat, 11 Oct 2025 05:23:05 GMT
+      - Wed, 05 Aug 2026 00:56:18 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=502
+      - gfet4t7; dur=1522
       Transfer-Encoding:
       - chunked
       Vary:

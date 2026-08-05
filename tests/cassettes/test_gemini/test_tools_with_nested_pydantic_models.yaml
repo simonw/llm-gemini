@@ -4,7 +4,7 @@ interactions:
       old and lives at 123 Main St, San Francisco, CA 94102 to the database"}]}],"safetySettings":[{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}],"tools":[{"functionDeclarations":[{"name":"add_person","description":"Add
       a person with their address to the database","parameters":{"description":"Input
       for creating a person with address","properties":{"name":{"title":"Name","type":"string"},"age":{"title":"Age","type":"integer"},"address":{"description":"Address
-      information","properties":{"street":{"title":"Street","type":"string"},"city":{"title":"City","type":"string"},"zipcode":{"title":"Zipcode","type":"string"}},"required":["street","city","zipcode"],"title":"Address","type":"object"}},"required":["name","age","address"],"type":"object"}}]}]}'
+      information","properties":{"street":{"title":"Street","type":"string"},"city":{"title":"City","type":"string"},"zipcode":{"title":"Zipcode","type":"string"}},"required":["street","city","zipcode"],"title":"Address","type":"object"}},"required":["name","age","address"],"type":"object"}}]}],"generationConfig":{"thinkingConfig":{"includeThoughts":true}}}'
     headers:
       accept:
       - '*/*'
@@ -13,7 +13,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1048'
+      - '1111'
       content-type:
       - application/json
       host:
@@ -25,35 +25,28 @@ interactions:
   response:
     body:
       string: !!binary |
-        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
+        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
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
@@ -62,11 +55,11 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Mon, 13 Oct 2025 03:33:11 GMT
+      - Wed, 05 Aug 2026 00:58:00 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=2042
+      - gfet4t7; dur=1426
       Transfer-Encoding:
       - chunked
       Vary:
@@ -84,12 +77,12 @@ interactions:
       message: OK
 - request:
     body: '{"contents":[{"role":"user","parts":[{"text":"Add Alice who is 30 years
-      old and lives at 123 Main St, San Francisco, CA 94102 to the database"}]},{"role":"model","parts":[{"text":""},{"function_call":{"name":"add_person","args":{"name":"Alice","address":{"city":"San
-      Francisco","zipcode":"94102","street":"123 Main St"},"age":30}}}]},{"role":"user","parts":[{"function_response":{"name":"add_person","response":{"output":"Added
-      Alice (age 30) living at 123 Main St, San Francisco"}}}]}],"safetySettings":[{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}],"tools":[{"functionDeclarations":[{"name":"add_person","description":"Add
+      old and lives at 123 Main St, San Francisco, CA 94102 to the database"}]},{"role":"model","parts":[{"function_call":{"name":"add_person","args":{"age":30,"name":"Alice","address":{"street":"123
+      Main St","city":"San Francisco","zipcode":"94102"}},"id":"whZntcQw"},"thoughtSignature":"EsYFCsMFARFNMg/JPnxoLqVvMVemTTo3utkRj4R30ZEOXUZF2P7Sm0CZamziRafLtKuxVUpCkTH9K33YoUiPx6VziNQFmpMKhJAb5eqW+MlOBmFn0zruDf2D+0oaMvR4VoQVxUAQDh4NsOGITPjZuUDOEbxvuxmqLaHK2PlEX3XZCFzQmOcyRevCh7x6GS16w3Lad4ZsurIliaJ5gOHaS1UZPaeARXvZmycAVbrRPg0Xxdp1BgcieAO4z9fUtt2KdCKZMba576zhXmEwNuzAvLPX0E0CQ+y3BRjI+1w+vIOSyLFn4cUkku7LP9ATlV2DX1v5q+ZRer/csOaSeY8R0ZOVaPTjRvPGkdZLs7mxKQ8l88nPLAZihExZl11UOwq0gYbVUUmeqrTDGcpcLjhv78/UtIF2vup3VzTrwhzx3rKt0mbqAlol8smXX5Bd0Dn18xMqttk+tz61vg/7hTX27MJCV6bOopeCMC3U0xAUUYb1wCr6GpHxgUbtW8TyyKu6IwJix1RXycDja/rqldGnIYRC/dsjtQYu9UwQbloG1MK0y7lLduPVyqaL9FDN5qandyLwdjMbEPh7P90PWWQcfEIVhR+tIzrhJGsK/2XybEO097q8f5/BH7PcDink9q6xvQiCPG3Yn+DFHmvvfKtYufirDuC3Hh+BSz017nn/2rrJpxzk1EZ8sLhsRI90ycNvACE9QPp+pTo1al1und93CY8vwvJxrGvdxe21UuqsKTWRoz8bqmrmP8UMZWOYdcrlCzbqR1AAuMh5TH8AiRQW5xOAkBdZQGStPN7bot2K4Z+CZ6YeWy8n750wJ8xN8LKgrWf46yu/vTY26X4cIGb8V2w0tb9AUx2U+fDm6yWMxxdayuZa3p9519RKF5ojIx3bHxOVfXgxXRXsT3i2dqsHIy84sirV1vpJURMX6McJ4IcVdVRG3FmBog0="}]},{"role":"user","parts":[{"function_response":{"name":"add_person","response":{"output":"Added
+      Alice (age 30) living at 123 Main St, San Francisco"},"id":"whZntcQw"}}]}],"safetySettings":[{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}],"tools":[{"functionDeclarations":[{"name":"add_person","description":"Add
       a person with their address to the database","parameters":{"description":"Input
       for creating a person with address","properties":{"name":{"title":"Name","type":"string"},"age":{"title":"Age","type":"integer"},"address":{"description":"Address
-      information","properties":{"street":{"title":"Street","type":"string"},"city":{"title":"City","type":"string"},"zipcode":{"title":"Zipcode","type":"string"}},"required":["street","city","zipcode"],"title":"Address","type":"object"}},"required":["name","age","address"],"type":"object"}}]}]}'
+      information","properties":{"street":{"title":"Street","type":"string"},"city":{"title":"City","type":"string"},"zipcode":{"title":"Zipcode","type":"string"}},"required":["street","city","zipcode"],"title":"Address","type":"object"}},"required":["name","age","address"],"type":"object"}}]}],"generationConfig":{"thinkingConfig":{"includeThoughts":true}}}'
     headers:
       accept:
       - '*/*'
@@ -98,7 +91,7 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '1388'
+      - '2445'
       content-type:
       - application/json
       host:
@@ -110,17 +103,18 @@ interactions:
   response:
     body:
       string: !!binary |
-        H4sIAAAAAAAC/7xTXWvCMBR9768oedqDHeImw711NWhZ/aCtUxEp0V5dsCZdEzdF/O9Lq9UIY2MM
-        1odyc+859+SU08neME00JyymMZEg0KM5UR3T3BfvfMaZBCbVoGypZkoyecEen71WK4iEbU5CdkLn
-        YN6QJZhIQxzO9bRy2ZvxBHLSmseQlPBDCUCUxbBV8+q5I8gC5M4nkrLl9YX06yiDEpY82+W727bf
-        iRw7xK2eP44CPBrYnjeO8KjvuY4boopOTDM+IzOaUFlwu7jluS33ycMXL4fKbzXbqoiCPsZO+1/U
-        fDsIOrj7vTWvN/yLStPutrDfGwSR0+uGP4l96exUTY3yVCQDbYTKTgckUQEl5xjmG9epDPkKmMM3
-        RUBr9w9HUS3QV4C701hySZJrav2UKX2vaCpVmui50v4BlVFS+gnxSDesBK6vVSbZKA0WH/gY8xfI
-        BOUsX7OENWXUqt3WrUVCxKuVZvBO4cOqNqxatVYvJFAGIuVMgBvnHKvtCdKZBc3G25CLQb8qnhsr
-        e4yMg/EJAAD//9Lh5aJ59jY20FTIySwDZj+FxBIFQyNjBd/EzDyF4BIdheDEPAW3osS85Mzi5HyF
-        jMRihaTU1DyFxJSU1BSFknyFkozU0RJhEJcI1LFsSBQMRka4SwYzy+FXMgAAAAD//6JHyaAAipak
-        xOJUPYpzeRrQ78UZQamJxZDQCA7xD1AaLQNGywCqlgEmuMsAc8PhVwYAAAAA//+KBQAAAP//AwDz
-        QTEL/AsAAA==
+        H4sIAAAAAAAC/1xQwUrEMBC99ytCTgpWql119baoyB4KHsqysOwhNGMbTZOSTGWX0n83abe7qTmE
+        Yd6bN/PerosIoQVTXHCGYOkL2bkOId3we0wrBIUOmFqu2TCDF+74uqB2FISDH6IrKQogV6wEkibX
+        NCD153p/c5E2WoKfqzUHOdH7iUCF4nBweBJNEsMwba3bkAEyZ4Odj6WN0XWDuf4B9arbwcb9cjGq
+        BbZnhKcTjBqZnCFpMo0GuvbNbRUyjCNIytlgUuDRW8rftzkNrOK/syazUZAJxUq3ZYXzE+/SE2rB
+        /Lp8cwHGb7DoLDHDfW5DZmOMGzBWaOUZJdRCiTi9fYy/JLPVcA81YButLKz5EP26OTIdf2QPZvOd
+        FZ/lcvusVwsa9dEfAAAA///S4eWieYpRyMksy8xLV0gsUTA0MlbwTczMUwgu0VEITsxTcCtKzEvO
+        LE7O11FwdlSwNDE0MFLISCxWSEpNzVMoLk1OTi0uTivNyalUSExJSU1RKMlXKMlIVQAliqTE4lS9
+        oZD+jE1wJ0BjwxGeAAEAAAD//9SUTXKCMACF79ILUBSiWcaQCkojhDiAu8gkRKURCbXK6eu0G9f9
+        m+kN3rz3fe8vALyr6L6BbFcb0b92H3iQI5lhM52R9eM1cJSQxcI+Ef+IRtg7mXzRo7rSQMpmU1QI
+        NLsOXsZ0oC0OPIP1NhJnrgu41+NpOK/hSSqaveWXWjUMK62Xxb7voudkYgHNw205Xw5ZNCqdF//A
+        hQNt3g4ppO66qaIUM2HSa9wi3eFkRTwmaVqeebwJeMzQoYfAtSH8NvjqtprVTAr7uWPGV8nDD2rh
+        gcmXtfDd3/vlW65/oMU7AAAA//+KBQAAAP//AwCg8jCvyQcAAA==
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
@@ -129,11 +123,11 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Mon, 13 Oct 2025 03:33:12 GMT
+      - Wed, 05 Aug 2026 00:58:01 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=370
+      - gfet4t7; dur=707
       Transfer-Encoding:
       - chunked
       Vary:

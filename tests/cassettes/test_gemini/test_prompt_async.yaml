@@ -1,10 +1,7 @@
 interactions:
 - request:
-    body: '{"contents": [{"role": "user", "parts": [{"text": "Name for a pet pelican,
-      just the name"}]}], "safetySettings": [{"category": "HARM_CATEGORY_DANGEROUS_CONTENT",
-      "threshold": "BLOCK_NONE"}, {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-      "threshold": "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold":
-      "BLOCK_NONE"}, {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"}]}'
+    body: '{"contents":[{"role":"user","parts":[{"text":"Name for a pet pelican, just
+      the name"}]}],"safetySettings":[{"category":"HARM_CATEGORY_DANGEROUS_CONTENT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_SEXUALLY_EXPLICIT","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HATE_SPEECH","threshold":"BLOCK_NONE"},{"category":"HARM_CATEGORY_HARASSMENT","threshold":"BLOCK_NONE"}],"generationConfig":{"thinkingConfig":{"includeThoughts":true}}}'
     headers:
       accept:
       - '*/*'
@@ -13,26 +10,54 @@ interactions:
       connection:
       - keep-alive
       content-length:
-      - '405'
+      - '446'
       content-type:
       - application/json
       host:
       - generativelanguage.googleapis.com
       user-agent:
-      - python-httpx/0.25.2
+      - python-httpx/0.28.1
     method: POST
-    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:streamGenerateContent
+    uri: https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:streamGenerateContent
   response:
     body:
       string: !!binary |
-        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
+        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
+        zP2fkLl/AAAA//+KBQAAAP//AwCGV7NFFA8AAA==
     headers:
       Alt-Svc:
       - h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
@@ -41,11 +66,11 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Mon, 17 Feb 2025 05:16:14 GMT
+      - Wed, 05 Aug 2026 00:56:06 GMT
       Server:
       - scaffolding on HTTPServer2
       Server-Timing:
-      - gfet4t7; dur=272
+      - gfet4t7; dur=1771
       Transfer-Encoding:
       - chunked
       Vary:
