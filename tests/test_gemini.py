@@ -151,14 +151,42 @@ def test_prompt_with_multiple_dogs():
 @pytest.mark.vcr
 @pytest.mark.parametrize(
     "model_id",
-    ("gemini-embedding-001",),
+    (
+        "gemini-embedding-001",
+        "gemini-embedding-001-768",
+        "gemini-embedding-2",
+        "gemini-embedding-2-768",
+    ),
 )
 def test_embedding(model_id, monkeypatch):
     monkeypatch.setenv("LLM_GEMINI_KEY", GEMINI_API_KEY)
     model = llm.get_embedding_model(model_id)
     response = model.embed("Some text goes here")
-    expected_length = 3072
+    expected_length = 768 if model_id.endswith("-768") else 3072
     assert len(response) == expected_length
+    magnitude = sum(component**2 for component in response) ** 0.5
+    assert magnitude == pytest.approx(1.0, abs=1e-6)
+
+
+@pytest.mark.vcr
+def test_embedding_batch(monkeypatch):
+    monkeypatch.setenv("LLM_GEMINI_KEY", GEMINI_API_KEY)
+    model = llm.get_embedding_model("gemini-embedding-2-768")
+    responses = model.embed_batch(["First text", "Second text"])
+    assert len(responses) == 2
+    assert all(len(response) == 768 for response in responses)
+
+
+def test_embedding_models():
+    dimensions = (768, 1536)
+    for gemini_model_id in ("gemini-embedding-2", "gemini-embedding-001"):
+        model = llm.get_embedding_model(gemini_model_id)
+        assert model.gemini_model_id == gemini_model_id
+        assert model.output_dimensionality is None
+        for dimension in dimensions:
+            model = llm.get_embedding_model(f"{gemini_model_id}-{dimension}")
+            assert model.gemini_model_id == gemini_model_id
+            assert model.output_dimensionality == dimension
 
 
 @pytest.mark.parametrize(
@@ -1089,7 +1117,9 @@ def test_server_side_tool_request_specs_and_config():
     }
 
 
-@pytest.mark.parametrize("model_id", ("gemini-flash-latest", "gemini-flash-lite-latest"))
+@pytest.mark.parametrize(
+    "model_id", ("gemini-flash-latest", "gemini-flash-lite-latest")
+)
 def test_latest_aliases_enable_server_tool_context(model_id):
     from llm_gemini import GoogleSearch
 

@@ -267,27 +267,35 @@ An `httpx.TimeoutException` subclass will be raised if the timeout is exceeded.
 
 ## Embeddings
 
-The plugin also adds support for the `gemini-embedding-exp-03-07` and `text-embedding-004` embedding models.
+The plugin supports Google's current [Gemini embedding models](https://ai.google.dev/gemini-api/docs/embeddings):
+
+- `gemini-embedding-2` is the latest model.
+- `gemini-embedding-001` remains available for text-only use cases.
 
 Run that against a single string like this:
 ```bash
-llm embed -m text-embedding-004 -c 'hello world'
+llm embed -m gemini-embedding-2 -c 'hello world'
 ```
-This returns a JSON array of 768 numbers.
+This returns a JSON array of 3072 numbers.
 
-The `gemini-embedding-exp-03-07` model is larger, returning 3072 numbers. You can also use variants of it that are truncated down to smaller sizes:
+Both models have variants that ask Gemini to return its recommended smaller
+vector sizes of 768 or 1536 dimensions, specified as a suffix on the model ID:
 
-- `gemini-embedding-exp-03-07` - 3072 numbers
-- `gemini-embedding-exp-03-07-2048` - 2048 numbers
-- `gemini-embedding-exp-03-07-1024` - 1024 numbers
-- `gemini-embedding-exp-03-07-512` - 512 numbers
-- `gemini-embedding-exp-03-07-256` - 256 numbers
-- `gemini-embedding-exp-03-07-128` - 128 numbers
+- `gemini-embedding-2` - 3072 numbers
+- `gemini-embedding-2-1536` - 1536 numbers
+- `gemini-embedding-2-768` - 768 numbers
+- `gemini-embedding-001` - 3072 numbers
+- `gemini-embedding-001-1536` - 1536 numbers
+- `gemini-embedding-001-768` - 768 numbers
+
+The embedding spaces used by the two models are incompatible. If you switch an
+existing collection from `gemini-embedding-001` to `gemini-embedding-2`, you
+must re-embed all of its content.
 
 This command will embed every `README.md` file in child directories of the current directory and store the results in a SQLite database called `embed.db` in a collection called `readmes`:
 
 ```bash
-llm embed-multi readmes -d embed.db -m gemini-embedding-exp-03-07-128 \
+llm embed-multi readmes -d embed.db -m gemini-embedding-2-768 \
   --files . '*/README.md'
 ```
 You can then run similarity searches against that collection like this:

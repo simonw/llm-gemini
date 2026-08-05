@@ -5,6 +5,7 @@ import httpx
 import ijson
 import json
 import llm
+import math
 from llm.models import _partition_tools
 from llm.parts import (
     AttachmentPart,
@@ -94,9 +95,7 @@ def _supports_url_context(model_id):
 def _supports_code_execution(model_id):
     if model_id.startswith("gemini-2.0-flash-lite"):
         return False
-    return model_id.startswith(
-        ("gemini-1.5", "gemini-2", "gemini-3", "gemini-flash")
-    )
+    return model_id.startswith(("gemini-1.5", "gemini-2", "gemini-3", "gemini-flash"))
 
 
 def _supports_server_tool_context(model_id):
@@ -1170,9 +1169,16 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
 
 @llm.hookimpl
 def register_embedding_models(register):
-    register(
-        GeminiEmbeddingModel("gemini-embedding-001", "gemini-embedding-001"),
-    )
+    for model_id in ("gemini-embedding-2", "gemini-embedding-001"):
+        register(GeminiEmbeddingModel(model_id, model_id))
+        for output_dimensionality in (768, 1536):
+            register(
+                GeminiEmbeddingModel(
+                    f"{model_id}-{output_dimensionality}",
+                    model_id,
+                    output_dimensionality,
+                )
+            )
 
 
 class GeminiEmbeddingModel(llm.EmbeddingModel):
@@ -1180,25 +1186,26 @@ class GeminiEmbeddingModel(llm.EmbeddingModel):
     key_env_var = "LLM_GEMINI_KEY"
     batch_size = 20
 
-    def __init__(self, model_id, gemini_model_id, truncate=None):
+    def __init__(self, model_id, gemini_model_id, output_dimensionality=None):
         self.model_id = model_id
         self.gemini_model_id = gemini_model_id
-        self.truncate = truncate
+        self.output_dimensionality = output_dimensionality
 
     def embed_batch(self, items):
         headers = {
             "Content-Type": "application/json",
             "x-goog-api-key": self.get_key(),
         }
-        data = {
-            "requests": [
-                {
-                    "model": "models/" + self.gemini_model_id,
-                    "content": {"parts": [{"text": item}]},
-                }
-                for item in items
-            ]
-        }
+        requests = []
+        for item in items:
+            request = {
+                "model": "models/" + self.gemini_model_id,
+                "content": {"parts": [{"text": item}]},
+            }
+            if self.output_dimensionality:
+                request["outputDimensionality"] = self.output_dimensionality
+            requests.append(request)
+        data = {"requests": requests}
 
         with httpx.Client() as client:
             response = client.post(
@@ -1210,8 +1217,21 @@ class GeminiEmbeddingModel(llm.EmbeddingModel):
 
         response.raise_for_status()
         values = [item["values"] for item in response.json()["embeddings"]]
-        if self.truncate:
-            values = [value[: self.truncate] for value in values]
+        # gemini-embedding-2 normalizes reduced vectors automatically, but
+        # gemini-embedding-001 requires callers to normalize them.
+        if (
+            self.gemini_model_id == "gemini-embedding-001"
+            and self.output_dimensionality
+        ):
+            normalized = []
+            for value in values:
+                magnitude = math.sqrt(sum(component**2 for component in value))
+                normalized.append(
+                    [component / magnitude for component in value]
+                    if magnitude
+                    else value
+                )
+            values = normalized
         return values
 
 
