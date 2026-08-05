@@ -1171,8 +1171,13 @@ def register_commands(cli):
     def files(key):
         "List of files uploaded to the Gemini API"
         key = llm.get_key(key, "gemini", "LLM_GEMINI_KEY")
+        if not key:
+            raise click.ClickException(
+                "You must set the LLM_GEMINI_KEY environment variable or use --key"
+            )
         response = httpx.get(
-            f"https://generativelanguage.googleapis.com/v1beta/files?key={key}",
+            "https://generativelanguage.googleapis.com/v1beta/files",
+            headers={"x-goog-api-key": key},
         )
         response.raise_for_status()
         if "files" in response.json():
