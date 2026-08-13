@@ -51,6 +51,7 @@ GOOGLE_SEARCH_MODELS = {
     "gemini-3.1-flash-lite",
     "gemini-3.5-flash",
     "gemini-3.6-flash",
+    "gemini-3.7-flash",
     "gemini-3.5-flash-lite",
 }
 
@@ -162,6 +163,7 @@ MODEL_THINKING_LEVELS = {
     "gemini-3.1-flash-lite": ["minimal", "low", "medium", "high"],
     "gemini-3.5-flash": ["minimal", "low", "medium", "high"],
     "gemini-3.6-flash": ["minimal", "low", "medium", "high"],
+    "gemini-3.7-flash": ["low", "medium", "high"],
     "gemini-3.5-flash-lite": ["minimal", "low", "medium", "high"],
 }
 
@@ -238,6 +240,8 @@ def register_models(register):
         # 21st July 2026
         "gemini-3.6-flash",
         "gemini-3.5-flash-lite",
+        # 13th August 2026
+        "gemini-3.7-flash",
     ):
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         can_url_context = _supports_url_context(model_id)
