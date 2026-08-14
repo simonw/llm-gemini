@@ -1058,6 +1058,8 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                             gathered.append(event)
                         events.clear()
         response.response_json = gathered[-1]
+        resolved_model = gathered[-1]["modelVersion"]
+        response.set_resolved_model(resolved_model)
         self.set_usage(response)
 
 
