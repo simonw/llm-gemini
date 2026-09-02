@@ -40,6 +40,7 @@ async def test_prompt_async():
     )
     text = await response.text()
     assert text.strip()
+    assert response.resolved_model == response.response_json["modelVersion"]
 
 
 @pytest.mark.vcr
