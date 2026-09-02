@@ -9,7 +9,12 @@ import pydantic
 from pydantic import BaseModel
 import sys
 from typing import List, Optional
-from llm_gemini import cleanup_schema, is_youtube_url
+from llm_gemini import (
+    _extract_search_suggestions,
+    _search_suggestions_display_event,
+    cleanup_schema,
+    is_youtube_url,
+)
 
 GEMINI_API_KEY = os.environ.get("PYTEST_GEMINI_API_KEY", None) or "gm-..."
 
@@ -1389,3 +1394,89 @@ def test_google_search_grounding_metadata_is_raw_and_text_is_unchanged():
     assert events[0].type == "text"
     assert events[0].chunk == "Pelicans live worldwide."
     assert events[0].provider_metadata == {"gemini": {"groundingMetadata": grounding}}
+
+
+def test_extract_search_suggestions_from_rendered_content():
+    rendered_content = """
+    <style>.chip { color: blue; }</style>
+    <div class="carousel">
+      <a class="chip" href="https://www.google.com/search?q=%22Node.js%22&amp;client=app-vertex-grounding">
+        <span>&quot;Node.js&quot;</span> stable release
+      </a>
+      <a class="chip" href="https://vertexaisearch.cloud.google.com/grounding-api-redirect/opaque">
+        Latest post
+      </a>
+    </div>
+    """
+
+    assert _extract_search_suggestions(rendered_content) == [
+        (
+            '"Node.js" stable release',
+            "https://www.google.com/search?q=%22Node.js%22&client=app-vertex-grounding",
+        ),
+        (
+            "Latest post",
+            "https://vertexaisearch.cloud.google.com/grounding-api-redirect/opaque",
+        ),
+    ]
+
+
+def test_search_suggestions_are_a_trailing_display_event():
+    responses = [
+        {
+            "candidates": [
+                {
+                    "groundingMetadata": {
+                        "webSearchQueries": ["different order"],
+                        "searchEntryPoint": {
+                            "renderedContent": (
+                                '<a href="https://example.com/two">Second query</a>'
+                                '<a href="https://example.com/one">First query</a>'
+                            )
+                        },
+                    }
+                }
+            ]
+        }
+    ]
+
+    event = _search_suggestions_display_event(responses)
+
+    assert event.type == "display"
+    assert event.chunk == (
+        "\n<llm-gemini-search-suggestions>\n"
+        "Second query\n"
+        "https://example.com/two\n"
+        "First query\n"
+        "https://example.com/one\n"
+        "</llm-gemini-search-suggestions>\n"
+    )
+    assert event.provider_metadata == {
+        "gemini": {
+            "searchSuggestions": [
+                {"query": "Second query", "url": "https://example.com/two"},
+                {"query": "First query", "url": "https://example.com/one"},
+            ]
+        }
+    }
+
+
+def test_no_search_suggestions_display_event_without_links():
+    assert (
+        _search_suggestions_display_event(
+            [
+                {
+                    "candidates": [
+                        {
+                            "groundingMetadata": {
+                                "searchEntryPoint": {
+                                    "renderedContent": "<style></style>"
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        )
+        is None
+    )

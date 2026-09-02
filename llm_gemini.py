@@ -1,6 +1,7 @@
 import click
 import copy
 from enum import Enum
+from html.parser import HTMLParser
 import httpx
 import ijson
 import json
@@ -55,6 +56,71 @@ GOOGLE_SEARCH_MODELS = {
     "gemini-3.8-flash",
     "gemini-3.5-flash-lite",
 }
+
+
+class _SearchSuggestionsParser(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.suggestions = []
+        self._href = None
+        self._text = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "a":
+            href = dict(attrs).get("href")
+            if href:
+                self._href = href
+                self._text = []
+
+    def handle_data(self, data):
+        if self._href is not None:
+            self._text.append(data)
+
+    def handle_endtag(self, tag):
+        if tag == "a" and self._href is not None:
+            query = " ".join("".join(self._text).split())
+            if query:
+                self.suggestions.append((query, self._href))
+            self._href = None
+            self._text = []
+
+
+def _extract_search_suggestions(rendered_content):
+    parser = _SearchSuggestionsParser()
+    parser.feed(rendered_content)
+    parser.close()
+    return parser.suggestions
+
+
+def _search_suggestions_display_event(responses):
+    for payload in reversed(responses):
+        for candidate in payload.get("candidates", []):
+            rendered_content = (
+                candidate.get("groundingMetadata", {})
+                .get("searchEntryPoint", {})
+                .get("renderedContent")
+            )
+            if not rendered_content:
+                continue
+            suggestions = _extract_search_suggestions(rendered_content)
+            if not suggestions:
+                continue
+            lines = ["", "<llm-gemini-search-suggestions>"]
+            for query, url in suggestions:
+                lines.extend((query, url))
+            lines.extend(("</llm-gemini-search-suggestions>", ""))
+            return StreamEvent(
+                type="display",
+                chunk="\n".join(lines),
+                provider_metadata={
+                    "gemini": {
+                        "searchSuggestions": [
+                            {"query": query, "url": url} for query, url in suggestions
+                        ]
+                    }
+                },
+            )
+    return None
 
 
 def _supports_url_context(model_id):
@@ -1024,6 +1090,9 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
                             yield StreamEvent(type="text", chunk="")
                         gathered.append(event)
                     events.clear()
+        display_event = _search_suggestions_display_event(gathered)
+        if display_event:
+            yield display_event
         response.response_json = gathered[-1]
         resolved_model = gathered[-1]["modelVersion"]
         response.set_resolved_model(resolved_model)
@@ -1061,6 +1130,9 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                                 yield StreamEvent(type="text", chunk="")
                             gathered.append(event)
                         events.clear()
+        display_event = _search_suggestions_display_event(gathered)
+        if display_event:
+            yield display_event
         response.response_json = gathered[-1]
         self.set_usage(response)
 

@@ -174,6 +174,22 @@ llm -m gemini-3.6-flash -T GoogleSearch \
   'What happened in Ireland today?'
 ```
 
+Google Search suggestions are written to standard error as a tagged block,
+separate from the model's response text:
+
+```text
+<llm-gemini-search-suggestions>
+who is the CEO of Alphabet 2026
+https://www.google.com/search?q=who+is+the+CEO+of+Alphabet+2026&client=app-vertex-grounding&safesearch=active
+who is the CEO of Apple 2026
+https://www.google.com/search?q=who+is+the+CEO+of+Apple+2026&client=app-vertex-grounding&safesearch=active
+</llm-gemini-search-suggestions>
+```
+
+This block is display-only: it is excluded from `response.text()`, logs and
+subsequent conversation turns. Redirect or discard standard error if you do
+not want it, or consume `display` events from `response.stream_events()`.
+
 The plugin leaves the model's response text unchanged and retains Gemini's raw
 `groundingMetadata` on the response part. Use `llm logs -c --json` after running
 a prompt to inspect that metadata, which includes [additional information](https://github.com/simonw/llm-gemini/pull/29#issuecomment-2606201877) about grounded results.
