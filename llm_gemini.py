@@ -6,6 +6,7 @@ import ijson
 import json
 import llm
 import math
+import os
 from llm.models import _partition_tools
 from llm.parts import (
     AttachmentPart,
@@ -19,6 +20,46 @@ import re
 from pydantic import Field, create_model
 from typing import Any, Dict, Optional
 from uuid import uuid4
+from urllib.parse import quote, urlsplit, urlunsplit
+
+
+def _api_url(resource, model_id=None, method=None):
+    endpoint = os.environ.get("LLM_GEMINI_ENDPOINT") if model_id is not None else None
+    if endpoint:
+        env_name = "LLM_GEMINI_ENDPOINT"
+        value = endpoint.replace("{model}", quote(model_id, safe=""))
+        if "{" in value or "}" in value:
+            raise click.ClickException(
+                "LLM_GEMINI_ENDPOINT only supports the {model} placeholder"
+            )
+        suffix = ""
+    else:
+        env_name = "LLM_GEMINI_API_BASE"
+        value = os.environ.get(env_name) or "https://generativelanguage.googleapis.com"
+        suffix = f"/v1beta/{resource}"
+        if model_id is not None:
+            suffix += "/" + quote(model_id, safe="")
+
+    try:
+        url = httpx.URL(value)
+        parts = urlsplit(value)
+    except (httpx.InvalidURL, ValueError):
+        raise click.ClickException(
+            f"{env_name} must be an absolute HTTP(S) URL"
+        ) from None
+    if url.scheme not in ("http", "https") or not url.host or parts.fragment:
+        raise click.ClickException(
+            f"{env_name} must be an absolute HTTP(S) URL without a fragment"
+        )
+    if parts.username is not None or parts.password is not None:
+        raise click.ClickException(f"{env_name} must not contain URL credentials")
+    if not endpoint and parts.path.rstrip("/").endswith("/v1beta"):
+        suffix = suffix.removeprefix("/v1beta")
+    path = parts.path.rstrip("/") + suffix
+    if method:
+        path += ":" + method
+    return urlunsplit((parts.scheme, parts.netloc, path, parts.query, ""))
+
 
 SAFETY_SETTINGS = [
     {
@@ -995,7 +1036,7 @@ class _SharedGemini:
 
 class GeminiPro(_SharedGemini, llm.KeyModel):
     def execute(self, prompt, stream, response, conversation, key):
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model_id}:streamGenerateContent"
+        url = _api_url("models", self.gemini_model_id, "streamGenerateContent")
         gathered = []
         body = self.build_request_body(prompt, conversation)
 
@@ -1032,7 +1073,7 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
 
 class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
     async def execute(self, prompt, stream, response, conversation, key):
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model_id}:streamGenerateContent"
+        url = _api_url("models", self.gemini_model_id, "streamGenerateContent")
         gathered = []
         body = self.build_request_body(prompt, conversation)
 
@@ -1109,7 +1150,7 @@ class GeminiEmbeddingModel(llm.EmbeddingModel):
 
         with httpx.Client() as client:
             response = client.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model_id}:batchEmbedContents",
+                _api_url("models", self.gemini_model_id, "batchEmbedContents"),
                 headers=headers,
                 json=data,
                 timeout=None,
@@ -1162,7 +1203,7 @@ def register_commands(cli):
             raise click.ClickException(
                 "You must set the LLM_GEMINI_KEY environment variable or use --key"
             )
-        url = f"https://generativelanguage.googleapis.com/v1beta/models"
+        url = _api_url("models")
         response = httpx.get(url, headers={"x-goog-api-key": key})
         response.raise_for_status()
         models = response.json()["models"]
@@ -1181,9 +1222,9 @@ def register_commands(cli):
     def files(key):
         "List of files uploaded to the Gemini API"
         key = llm.get_key(key, "gemini", "LLM_GEMINI_KEY")
-        response = httpx.get(
-            f"https://generativelanguage.googleapis.com/v1beta/files?key={key}",
-        )
+        url = _api_url("files")
+        separator = "&" if urlsplit(url).query else "?"
+        response = httpx.get(f"{url}{separator}key={key}")
         response.raise_for_status()
         if "files" in response.json():
             click.echo(json.dumps(response.json()["files"], indent=2))
