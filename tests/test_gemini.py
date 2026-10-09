@@ -777,6 +777,34 @@ def test_youtube_url_detection():
     assert not is_youtube_url(None)
 
 
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://www.youtube.com/watch?feature=share&v=abc123",
+        "https://youtube.com/watch?list=playlist&v=abc123&t=10",
+    ],
+)
+def test_youtube_url_query_order(url):
+    from llm_gemini import resolve_type
+
+    assert is_youtube_url(url)
+    attachment = llm.Attachment(url=url, type="text/html")
+    assert resolve_type(attachment) == "video/youtube"
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://youtube.com/watch?preview=abc123",
+        "https://youtube.com/watch?next=v=abc123",
+        "https://youtube.com/watch?feature=share#v=abc123",
+        "https://youtube.com.example.com/watch?v=abc123",
+    ],
+)
+def test_youtube_url_requires_video_query_parameter(url):
+    assert not is_youtube_url(url)
+
+
 def test_gemini_3_flash_has_all_thinking_levels():
     """Gemini 3 Flash should support minimal, low, medium, high thinking levels."""
     import typing
