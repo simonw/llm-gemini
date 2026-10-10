@@ -1163,9 +1163,17 @@ def register_commands(cli):
                 "You must set the LLM_GEMINI_KEY environment variable or use --key"
             )
         url = f"https://generativelanguage.googleapis.com/v1beta/models"
-        response = httpx.get(url, headers={"x-goog-api-key": key})
-        response.raise_for_status()
-        models = response.json()["models"]
+        models = []
+        params = {}
+        while True:
+            response = httpx.get(url, headers={"x-goog-api-key": key}, params=params)
+            response.raise_for_status()
+            data = response.json()
+            models.extend(data.get("models", []))
+            next_page_token = data.get("nextPageToken")
+            if not next_page_token:
+                break
+            params = {"pageToken": next_page_token}
         if methods:
             models = [
                 model
