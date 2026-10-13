@@ -54,22 +54,23 @@ GOOGLE_SEARCH_MODELS = {
     "gemini-3.7-flash",
     "gemini-3.8-flash",
     "gemini-3.5-flash-lite",
+    "gemini-4-argon",
 }
 
 
 def _supports_url_context(model_id):
-    return model_id.startswith(("gemini-2.5", "gemini-3")) or model_id in {
+    return model_id.startswith(("gemini-2.5", "gemini-3", "gemini-4")) or model_id in {
         "gemini-flash-latest",
         "gemini-flash-lite-latest",
     }
 
 
 def _supports_code_execution(model_id):
-    return model_id.startswith(("gemini-2.5", "gemini-3", "gemini-flash"))
+    return model_id.startswith(("gemini-2.5", "gemini-3", "gemini-4", "gemini-flash"))
 
 
 def _supports_server_tool_context(model_id):
-    return model_id.startswith("gemini-3") or model_id in {
+    return model_id.startswith(("gemini-3", "gemini-4")) or model_id in {
         "gemini-flash-latest",
         "gemini-flash-lite-latest",
     }
@@ -167,6 +168,7 @@ MODEL_THINKING_LEVELS = {
     "gemini-3.7-flash": ["low", "medium", "high"],
     "gemini-3.8-flash": ["low", "medium", "high"],
     "gemini-3.5-flash-lite": ["minimal", "low", "medium", "high"],
+    "gemini-4-argon": ["low", "medium", "high"],
 }
 
 
@@ -246,6 +248,8 @@ def register_models(register):
         "gemini-3.7-flash",
         # 2nd September 2026
         "gemini-3.8-flash",
+        # 13th October 2026
+        "gemini-4-argon",
     ):
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         can_url_context = _supports_url_context(model_id)

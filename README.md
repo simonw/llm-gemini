@@ -52,6 +52,7 @@ result = runner.invoke(cli.cli, ["models", "-q", "gemini/"])
 lines = reversed(result.output.strip().split("\n"))
 to_output = []
 NOTES = {
+    "gemini/gemini-4-argon": "Gemini 4 Argon",
     "gemini/gemini-3.8-flash": "Gemini 3.8 Flash",
     "gemini/gemini-3.7-flash": "Gemini 3.7 Flash",
     "gemini/gemini-3.6-flash": "Gemini 3.6 Flash",
@@ -78,6 +79,7 @@ for line in lines:
     )
 cog.out("\n".join(to_output))
 ]]] -->
+- `gemini/gemini-4-argon`: Gemini 4 Argon
 - `gemini/gemini-3.8-flash`: Gemini 3.8 Flash
 - `gemini/gemini-3.7-flash`: Gemini 3.7 Flash
 - `gemini/gemini-3.5-flash-lite`: Gemini 3.5 Flash Lite
@@ -150,6 +152,39 @@ Outputs:
 ```json
 {"cities": [{"name": "Los Angeles"}, {"name": "San Diego"}, {"name": "San Jose"}]}
 ```
+
+### Thinking
+
+Gemini 3 and later models support a [thinking level](https://ai.google.dev/gemini-api/docs/thinking) that controls how much reasoning the model does before it responds. Set it with `-o thinking_level X`:
+
+```bash
+llm -m gemini-4-argon -o thinking_level high \
+  'Prove that there are infinitely many primes'
+```
+The supported levels vary by model. If you don't set a level the model uses its own default.
+
+<!-- [[[cog
+from llm_gemini import MODEL_THINKING_LEVELS
+cog.out("| Model | Thinking levels |\n| --- | --- |\n")
+for model_id, levels in MODEL_THINKING_LEVELS.items():
+    cog.out("| `{}` | {} |\n".format(model_id, ", ".join(f"`{l}`" for l in levels)))
+]]] -->
+| Model | Thinking levels |
+| --- | --- |
+| `gemini-3-flash-preview` | `minimal`, `low`, `medium`, `high` |
+| `gemini-3.1-pro-preview` | `low`, `medium`, `high` |
+| `gemini-3.1-pro-preview-customtools` | `low`, `medium`, `high` |
+| `gemini-3.1-flash-lite-preview` | `minimal`, `low`, `medium`, `high` |
+| `gemini-3.1-flash-lite` | `minimal`, `low`, `medium`, `high` |
+| `gemini-3.5-flash` | `minimal`, `low`, `medium`, `high` |
+| `gemini-3.6-flash` | `minimal`, `low`, `medium`, `high` |
+| `gemini-3.7-flash` | `low`, `medium`, `high` |
+| `gemini-3.8-flash` | `low`, `medium`, `high` |
+| `gemini-3.5-flash-lite` | `minimal`, `low`, `medium`, `high` |
+| `gemini-4-argon` | `low`, `medium`, `high` |
+<!-- [[[end]]] -->
+
+The `gemini-2.5-flash`, `gemini-flash-latest` and `gemini-flash-lite-latest` models instead take a thinking budget in tokens, using `-o thinking_budget X`. Set it to `0` to disable thinking.
 
 ### Code execution
 
