@@ -297,7 +297,7 @@ def is_youtube_url(url):
     if not url:
         return False
     youtube_patterns = [
-        r"^https?://(www\.)?youtube\.com/watch\?v=",
+        r"^https?://(www\.)?youtube\.com/watch\?(?:[^#]*&)?v=",
         r"^https?://youtu\.be/",
         r"^https?://(www\.)?youtube\.com/embed/",
     ]
