@@ -10,8 +10,253 @@ from pydantic import BaseModel
 import sys
 from typing import List, Optional
 from llm_gemini import cleanup_schema, is_youtube_url
+import llm_gemini
 
 GEMINI_API_KEY = os.environ.get("PYTEST_GEMINI_API_KEY", None) or "gm-..."
+
+
+@pytest.fixture
+def proxy_requests(tmp_path, monkeypatch):
+    import httpx
+
+    monkeypatch.setenv("LLM_USER_PATH", str(tmp_path))
+    monkeypatch.delenv("LLM_GEMINI_API_BASE", raising=False)
+    monkeypatch.delenv("LLM_GEMINI_ENDPOINT", raising=False)
+    monkeypatch.delenv("LLM_GEMINI_KEY", raising=False)
+    calls = []
+    client_class = httpx.Client
+    async_client_class = httpx.AsyncClient
+
+    def handle(request):
+        body = json.loads(request.content) if request.content else None
+        calls.append(
+            {
+                "url": str(request.url),
+                "key": request.headers.get("x-goog-api-key"),
+                "query": dict(request.url.params),
+                "body": body,
+            }
+        )
+        if request.method == "GET":
+            if request.url.path.endswith("/files"):
+                return httpx.Response(200, json={"files": [{"name": "files/local"}]})
+            return httpx.Response(
+                200,
+                json={
+                    "models": [
+                        {
+                            "name": "models/local",
+                            "supportedGenerationMethods": ["generateContent"],
+                        }
+                    ]
+                },
+            )
+        if request.url.path.endswith(":batchEmbedContents"):
+            return httpx.Response(
+                200,
+                json={"embeddings": [{"values": [1.0, 0.0]} for _ in body["requests"]]},
+            )
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "candidates": [
+                        {
+                            "content": {"parts": [{"text": "local reply"}]},
+                            "finishReason": "STOP",
+                        }
+                    ],
+                    "modelVersion": "proxy-model",
+                    "usageMetadata": {
+                        "promptTokenCount": 2,
+                        "candidatesTokenCount": 1,
+                        "totalTokenCount": 3,
+                    },
+                }
+            ],
+        )
+
+    transport = httpx.MockTransport(handle)
+    monkeypatch.setattr(
+        httpx,
+        "stream",
+        lambda method, url, **kwargs: client_class(transport=transport).stream(
+            method, url, **kwargs
+        ),
+    )
+    monkeypatch.setattr(
+        httpx,
+        "get",
+        lambda url, **kwargs: client_class(transport=transport).get(url, **kwargs),
+    )
+    monkeypatch.setattr(
+        httpx, "Client", lambda **kwargs: client_class(transport=transport, **kwargs)
+    )
+    monkeypatch.setattr(
+        httpx,
+        "AsyncClient",
+        lambda **kwargs: async_client_class(transport=transport, **kwargs),
+    )
+    return calls
+
+
+PROXY_ROUTES = [
+    ({}, "https://generativelanguage.googleapis.com/v1beta/models/{model}"),
+    (
+        {"LLM_GEMINI_API_BASE": "http://proxy.test/root///"},
+        "http://proxy.test/root/v1beta/models/{model}",
+    ),
+    (
+        {"LLM_GEMINI_API_BASE": "http://proxy.test/root/v1beta/"},
+        "http://proxy.test/root/v1beta/models/{model}",
+    ),
+    (
+        {"LLM_GEMINI_ENDPOINT": "http://proxy.test/team/fixed-model/"},
+        "http://proxy.test/team/fixed-model",
+    ),
+    (
+        {
+            "LLM_GEMINI_API_BASE": "http://unused.test/root",
+            "LLM_GEMINI_ENDPOINT": "http://proxy.test/team/{model}?tenant=a",
+        },
+        "http://proxy.test/team/{model}?tenant=a",
+    ),
+]
+
+
+def proxy_expected(resource, method):
+    from urllib.parse import urlsplit, urlunsplit
+
+    parts = urlsplit(resource)
+    return urlunsplit(
+        (parts.scheme, parts.netloc, parts.path + ":" + method, parts.query, "")
+    )
+
+
+@pytest.mark.parametrize("env,expected", PROXY_ROUTES)
+@pytest.mark.parametrize("async_", [False, True])
+@pytest.mark.asyncio
+async def test_proxy_generation(proxy_requests, monkeypatch, env, expected, async_):
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+    get_model = llm.get_async_model if async_ else llm.get_model
+    for name in ("gemini-flash-latest", "gemini-2.5-flash"):
+        response = get_model(name).prompt("hello", key="gm-fake", stream=False)
+        text = await response.text() if async_ else response.text()
+        assert text == "local reply"
+        assert response.resolved_model == "proxy-model"
+        assert response.input_tokens == 2
+    assert [c["url"] for c in proxy_requests] == [
+        proxy_expected(expected.format(model=name), "streamGenerateContent")
+        for name in ("gemini-flash-latest", "gemini-2.5-flash")
+    ]
+    assert all(c["key"] == "gm-fake" for c in proxy_requests)
+    assert all(
+        c["body"]["contents"][0]["parts"] == [{"text": "hello"}] for c in proxy_requests
+    )
+
+
+@pytest.mark.parametrize("env,expected", PROXY_ROUTES)
+def test_proxy_embeddings(proxy_requests, monkeypatch, env, expected):
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.setenv("LLM_GEMINI_KEY", "gm-fake")
+    model = llm.get_embedding_model("gemini-embedding-2")
+    assert model.embed("hello") == [1.0, 0.0]
+    assert proxy_requests[0]["url"] == proxy_expected(
+        expected.format(model="gemini-embedding-2"), "batchEmbedContents"
+    )
+    assert proxy_requests[0]["key"] == "gm-fake"
+    assert (
+        proxy_requests[0]["body"]["requests"][0]["model"] == "models/gemini-embedding-2"
+    )
+
+
+@pytest.mark.parametrize(
+    "root", ["http://proxy.test/root/", "http://proxy.test/root/v1beta/"]
+)
+def test_proxy_catalog_and_files(proxy_requests, monkeypatch, root):
+    monkeypatch.setenv("LLM_GEMINI_API_BASE", root + "?tenant=a")
+    monkeypatch.setenv("LLM_GEMINI_ENDPOINT", "http://not-a-collection.test/{model}")
+    runner = CliRunner()
+    for command in ("models", "files"):
+        result = runner.invoke(cli, ["gemini", command, "--key", "gm-fake"])
+        assert result.exit_code == 0, result.output
+        assert "local" in result.output
+    assert [c["url"] for c in proxy_requests] == [
+        "http://proxy.test/root/v1beta/models?tenant=a",
+        "http://proxy.test/root/v1beta/files?tenant=a&key=gm-fake",
+    ]
+    assert proxy_requests[0]["key"] == "gm-fake"
+    assert proxy_requests[1]["key"] is None
+
+
+@pytest.mark.parametrize(
+    "variable,value",
+    [
+        ("LLM_GEMINI_API_BASE", "relative/path"),
+        ("LLM_GEMINI_API_BASE", "ftp://proxy.test"),
+        ("LLM_GEMINI_API_BASE", "http://proxy.test/#inline-secret"),
+        ("LLM_GEMINI_API_BASE", "http://user:inline-secret@proxy.test"),
+        ("LLM_GEMINI_ENDPOINT", "http://proxy.test/{unknown}?key=inline-secret"),
+        ("LLM_GEMINI_ENDPOINT", "http://user:inline-secret@proxy.test/model"),
+        ("LLM_GEMINI_ENDPOINT", "//proxy.test/model"),
+    ],
+)
+def test_proxy_invalid_config_before_http(proxy_requests, monkeypatch, variable, value):
+    import click
+
+    monkeypatch.setenv(variable, value)
+    with pytest.raises(click.ClickException) as caught:
+        llm.get_model("gemini-flash-latest").prompt("hello", key="gm-fake").text()
+    assert variable in str(caught.value)
+    assert "inline-secret" not in str(caught.value)
+    assert not proxy_requests
+
+
+@pytest.mark.parametrize("async_", [False, True])
+@pytest.mark.asyncio
+async def test_proxy_missing_key_before_http(proxy_requests, monkeypatch, async_):
+    monkeypatch.setenv("LLM_GEMINI_API_BASE", "http://proxy.test")
+    get_model = llm.get_async_model if async_ else llm.get_model
+    with pytest.raises(llm.NeedsKeyException):
+        response = get_model("gemini-flash-latest").prompt("hello")
+        if async_:
+            await response.text()
+        else:
+            response.text()
+    assert not proxy_requests
+
+
+def test_proxy_registration_no_http(proxy_requests, monkeypatch):
+    monkeypatch.setenv("LLM_GEMINI_API_BASE", "invalid configuration")
+    monkeypatch.setenv("LLM_GEMINI_ENDPOINT", "invalid configuration")
+    assert llm.get_model("gemini-flash-latest")
+    assert llm.get_async_model("gemini-flash-latest")
+    assert llm.get_embedding_model("gemini-embedding-2")
+    assert not proxy_requests
+
+
+def test_proxy_missing_embedding_and_catalog_key(proxy_requests, monkeypatch):
+    monkeypatch.setenv("LLM_GEMINI_API_BASE", "http://proxy.test/root")
+    with pytest.raises(llm.NeedsKeyException):
+        llm.get_embedding_model("gemini-embedding-2").embed("hello")
+    result = CliRunner().invoke(cli, ["gemini", "models"])
+    assert result.exit_code != 0
+    assert "LLM_GEMINI_KEY" in result.output
+    assert not proxy_requests
+
+
+def test_proxy_env_is_read_at_request_time(proxy_requests, monkeypatch):
+    model = llm.get_model("gemini-flash-latest")
+    monkeypatch.setenv("LLM_GEMINI_API_BASE", "http://proxy.test/first")
+    assert model.prompt("hello", key="gm-fake").text() == "local reply"
+    monkeypatch.setenv("LLM_GEMINI_ENDPOINT", "http://proxy.test/second/model")
+    assert model.prompt("hello", key="gm-fake").text() == "local reply"
+    assert [c["url"] for c in proxy_requests] == [
+        "http://proxy.test/first/v1beta/models/gemini-flash-latest:streamGenerateContent",
+        "http://proxy.test/second/model:streamGenerateContent",
+    ]
 
 
 @pytest.mark.vcr
