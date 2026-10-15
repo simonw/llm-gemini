@@ -319,9 +319,10 @@ def cleanup_schema(schema, in_properties=False):
             for key in keys_to_remove:
                 schema.pop(key, None)
         for key, value in list(schema.items()):
-            # If the key is 'properties', set the flag for its value.
+            # Property names are literals; only their values are schemas.
             if key == "properties" and isinstance(value, dict):
-                cleanup_schema(value, in_properties=True)
+                for property_schema in value.values():
+                    cleanup_schema(property_schema, in_properties=True)
             else:
                 cleanup_schema(value, in_properties=in_properties)
     elif isinstance(schema, list):
@@ -383,8 +384,12 @@ def _resolve_refs(schema, defs, expansion_stack=None):
                     return
 
         # Recursively resolve refs in nested structures
-        for value in schema.values():
-            _resolve_refs(value, defs, expansion_stack)
+        for key, value in schema.items():
+            if key == "properties" and isinstance(value, dict):
+                for property_schema in value.values():
+                    _resolve_refs(property_schema, defs, expansion_stack)
+            else:
+                _resolve_refs(value, defs, expansion_stack)
     elif isinstance(schema, list):
         for item in schema:
             _resolve_refs(item, defs, expansion_stack)
