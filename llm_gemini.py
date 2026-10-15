@@ -689,13 +689,30 @@ class _SharedGemini:
                 }
             }
 
+    def _system_text(self, prompt):
+        if prompt.system:
+            return prompt.system
+        # Follow-up turns retain the system instruction in canonical history
+        # even when the current turn has no explicit system prompt.
+        texts = []
+        for message in getattr(prompt, "messages", []):
+            if message.role != "system":
+                break
+            texts.extend(
+                part.text
+                for part in message.parts
+                if isinstance(part, TextPart) and part.text
+            )
+        return "\n\n".join(texts)
+
     def build_request_body(self, prompt, conversation):
         body = {
             "contents": self.build_messages(prompt, conversation),
             "safetySettings": SAFETY_SETTINGS,
         }
-        if prompt.system:
-            body["systemInstruction"] = {"parts": [{"text": prompt.system}]}
+        system = self._system_text(prompt)
+        if system:
+            body["systemInstruction"] = {"parts": [{"text": system}]}
 
         tools = []
         server_side_tools = []
