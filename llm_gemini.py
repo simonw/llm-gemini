@@ -1,4 +1,5 @@
 import click
+import codecs
 import copy
 from enum import Enum
 import httpx
@@ -997,6 +998,57 @@ class _SharedGemini:
             pass
 
 
+def _is_sse(response):
+    return (
+        response.headers.get("content-type", "").partition(";")[0].strip().lower()
+        == "text/event-stream"
+    )
+
+
+@ijson.coroutine
+def _sse_items(events):
+    # UTF-8 characters and the optional BOM may span HTTP chunks. SSE line
+    # endings are CR/LF only, unlike the broader Unicode splitlines().
+    decoder = codecs.getincrementaldecoder("utf-8-sig")("replace")
+    buffer = ""
+    data = []
+    skip_lf = False
+    while True:
+        text = decoder.decode((yield))
+        if not text:
+            continue
+        if skip_lf:
+            text = text.removeprefix("\n")
+        skip_lf = text.endswith("\r")
+        lines = re.split(r"\r\n|\r|\n", buffer + text)
+        buffer = lines.pop()
+        for line in lines:
+            if not line:
+                payload = "\n".join(data)
+                data.clear()
+                if not payload:
+                    continue
+                try:
+                    event = json.loads(payload)
+                except json.JSONDecodeError as ex:
+                    raise llm.ModelError("Invalid JSON in Gemini SSE data") from ex
+                if not isinstance(event, dict):
+                    raise llm.ModelError("Expected a JSON object in Gemini SSE data")
+                events.append(event)
+            elif not line.startswith(":"):
+                field, _, value = line.partition(":")
+                if field == "data":
+                    data.append(value.removeprefix(" "))
+    # Incomplete events at EOF are not dispatched, as required by SSE.
+
+
+def _response_items(events, response):
+    if _is_sse(response):
+        return _sse_items(events)
+    # Preserve fractional provider metadata as JSON-serializable floats.
+    return ijson.items_coro(events, "item", use_float=True)
+
+
 class GeminiPro(_SharedGemini, llm.KeyModel):
     def execute(self, prompt, stream, response, conversation, key):
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model_id}:streamGenerateContent"
@@ -1011,9 +1063,7 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
             json=body,
         ) as http_response:
             events = ijson.sendable_list()
-            # Keep provider metadata JSON-serializable: ijson otherwise parses
-            # fractional values such as grounding confidence scores as Decimal.
-            coro = ijson.items_coro(events, "item", use_float=True)
+            coro = _response_items(events, http_response)
             for chunk in http_response.iter_bytes():
                 coro.send(chunk)
                 if events:
@@ -1028,6 +1078,8 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
                             yield StreamEvent(type="text", chunk="")
                         gathered.append(event)
                     events.clear()
+        if not gathered and _is_sse(http_response):
+            raise llm.ModelError("Gemini SSE response contained no JSON data")
         response.response_json = gathered[-1]
         resolved_model = gathered[-1]["modelVersion"]
         response.set_resolved_model(resolved_model)
@@ -1049,7 +1101,7 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                 json=body,
             ) as http_response:
                 events = ijson.sendable_list()
-                coro = ijson.items_coro(events, "item", use_float=True)
+                coro = _response_items(events, http_response)
                 async for chunk in http_response.aiter_bytes():
                     coro.send(chunk)
                     if events:
@@ -1065,6 +1117,8 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                                 yield StreamEvent(type="text", chunk="")
                             gathered.append(event)
                         events.clear()
+        if not gathered and _is_sse(http_response):
+            raise llm.ModelError("Gemini SSE response contained no JSON data")
         response.response_json = gathered[-1]
         resolved_model = gathered[-1]["modelVersion"]
         response.set_resolved_model(resolved_model)
