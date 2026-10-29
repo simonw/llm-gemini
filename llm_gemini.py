@@ -350,6 +350,8 @@ def _resolve_refs(schema, defs, expansion_stack=None):
             ref_path = schema.pop("$ref")
             if ref_path.startswith("#/$defs/"):
                 def_name = ref_path.split("/")[-1]
+                # Decode JSON Pointer escapes in order so "~01" becomes "~1".
+                def_name = def_name.replace("~1", "/").replace("~0", "~")
                 if def_name in defs:
                     # Check for recursive reference
                     if def_name in expansion_stack:
