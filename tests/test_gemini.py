@@ -403,6 +403,21 @@ def test_cleanup_schema_with_refs(schema, expected):
     assert result == expected
 
 
+@pytest.mark.parametrize(
+    "definition_name,escaped_name",
+    [("a/b", "a~1b"), ("a~b", "a~0b")],
+)
+def test_cleanup_schema_with_escaped_ref_names(definition_name, escaped_name):
+    schema = {
+        "properties": {"value": {"$ref": f"#/$defs/{escaped_name}"}},
+        "$defs": {definition_name: {"type": "string"}},
+    }
+
+    assert cleanup_schema(schema) == {
+        "properties": {"value": {"type": "string"}}
+    }
+
+
 def test_recursive_schema_raises_error():
     """Test that recursive self-referential schemas raise a descriptive error."""
     # Simulate a recursive Node class: Node has a field 'next' that references Node
