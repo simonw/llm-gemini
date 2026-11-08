@@ -1390,3 +1390,128 @@ def test_google_search_grounding_metadata_is_raw_and_text_is_unchanged():
     assert events[0].type == "text"
     assert events[0].chunk == "Pelicans live worldwide."
     assert events[0].provider_metadata == {"gemini": {"groundingMetadata": grounding}}
+
+
+# --- files command tests ---
+
+
+def _make_files_transport(pages):
+    """Return an httpx MockTransport that serves pages in sequence."""
+    import httpx
+
+    responses = []
+    for i, file_list in enumerate(pages):
+        body = {"files": file_list}
+        if i < len(pages) - 1:
+            body["nextPageToken"] = f"token-{i + 1}"
+        responses.append(
+            httpx.Response(200, json=body)
+        )
+
+    call_count = {"n": 0}
+
+    def handler(request):
+        idx = call_count["n"]
+        call_count["n"] += 1
+        return responses[idx]
+
+    return httpx.MockTransport(handler)
+
+
+def test_files_pagination(monkeypatch, tmpdir):
+    """Multi-page: collects files from both pages."""
+    import httpx
+    import llm_gemini
+
+    page1 = [{"name": "files/a", "mimeType": "text/plain"}]
+    page2 = [{"name": "files/b", "mimeType": "image/jpeg"}]
+    transport = _make_files_transport([page1, page2])
+
+    original_get = httpx.get
+
+    def mock_get(url, **kwargs):
+        return httpx.Client(transport=transport).get(url, **kwargs)
+
+    monkeypatch.setattr(llm_gemini.httpx, "get", mock_get)
+    monkeypatch.setenv("LLM_GEMINI_KEY", "fake-key")
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["gemini", "files"])
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert len(data) == 2
+    assert data[0]["name"] == "files/a"
+    assert data[1]["name"] == "files/b"
+
+
+def test_files_single_page(monkeypatch, tmpdir):
+    """Single page with no nextPageToken."""
+    import httpx
+    import llm_gemini
+
+    page1 = [{"name": "files/only", "mimeType": "text/plain"}]
+    transport = _make_files_transport([page1])
+
+    def mock_get(url, **kwargs):
+        return httpx.Client(transport=transport).get(url, **kwargs)
+
+    monkeypatch.setattr(llm_gemini.httpx, "get", mock_get)
+    monkeypatch.setenv("LLM_GEMINI_KEY", "fake-key")
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["gemini", "files"])
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert len(data) == 1
+    assert data[0]["name"] == "files/only"
+
+
+def test_files_empty(monkeypatch, tmpdir):
+    """Empty response prints error message to stderr."""
+    import httpx
+    import llm_gemini
+
+    def handler(request):
+        return httpx.Response(200, json={})
+
+    transport = httpx.MockTransport(handler)
+
+    def mock_get(url, **kwargs):
+        return httpx.Client(transport=transport).get(url, **kwargs)
+
+    monkeypatch.setattr(llm_gemini.httpx, "get", mock_get)
+    monkeypatch.setenv("LLM_GEMINI_KEY", "fake-key")
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["gemini", "files"])
+    assert result.exit_code == 0
+    # stderr message goes to output when mixed (Click default)
+    assert "No files uploaded" in result.output
+
+
+def test_files_error_on_later_page(monkeypatch, tmpdir):
+    """Error on page 2 raises before printing partial results."""
+    import httpx
+    import llm_gemini
+
+    call_count = {"n": 0}
+
+    def handler(request):
+        if call_count["n"] == 0:
+            call_count["n"] += 1
+            return httpx.Response(
+                200, json={"files": [{"name": "files/a"}], "nextPageToken": "tok"}
+            )
+        return httpx.Response(500, json={"error": "server error"})
+
+    transport = httpx.MockTransport(handler)
+
+    def mock_get(url, **kwargs):
+        return httpx.Client(transport=transport).get(url, **kwargs)
+
+    monkeypatch.setattr(llm_gemini.httpx, "get", mock_get)
+    monkeypatch.setenv("LLM_GEMINI_KEY", "fake-key")
+
+    runner = CliRunner()
+    result = runner.invoke(cli, ["gemini", "files"])
+    assert result.exit_code != 0

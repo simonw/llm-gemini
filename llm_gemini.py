@@ -1185,11 +1185,22 @@ def register_commands(cli):
     def files(key):
         "List of files uploaded to the Gemini API"
         key = llm.get_key(key, "gemini", "LLM_GEMINI_KEY")
-        response = httpx.get(
-            f"https://generativelanguage.googleapis.com/v1beta/files?key={key}",
-        )
-        response.raise_for_status()
-        if "files" in response.json():
-            click.echo(json.dumps(response.json()["files"], indent=2))
+        all_files = []
+        params = {"key": key}
+        while True:
+            response = httpx.get(
+                "https://generativelanguage.googleapis.com/v1beta/files",
+                params=params,
+            )
+            response.raise_for_status()
+            data = response.json()
+            if "files" in data:
+                all_files.extend(data["files"])
+            next_token = data.get("nextPageToken")
+            if not next_token:
+                break
+            params["pageToken"] = next_token
+        if all_files:
+            click.echo(json.dumps(all_files, indent=2))
         else:
             click.echo("No files uploaded to the Gemini API.", err=True)
