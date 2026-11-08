@@ -1,4 +1,5 @@
 import click
+import codecs
 import copy
 from enum import Enum
 import httpx
@@ -996,6 +997,78 @@ class _SharedGemini:
         except (IndexError, KeyError):
             pass
 
+    def _finish(self, response, gathered):
+        if not gathered:
+            raise llm.ModelError("Gemini returned no response data")
+        response.response_json = gathered[-1]
+        response.set_resolved_model(gathered[-1]["modelVersion"])
+        self.set_usage(response)
+
+
+def _is_sse(response):
+    content_type = response.headers.get("content-type", "")
+    return content_type.split(";", 1)[0].strip().lower() == "text/event-stream"
+
+
+class _SSEDecoder:
+    """Incrementally turn text/event-stream bytes into JSON objects."""
+
+    _LINE_BREAK = re.compile(r"\r\n|\r|\n")
+
+    def __init__(self, events):
+        self._events = events
+        # utf-8-sig strips a leading BOM and tolerates it split across chunks
+        self._decoder = codecs.getincrementaldecoder("utf-8-sig")("replace")
+        self._buffer = ""
+        self._data = []
+        self._skip_lf = False
+
+    def send(self, chunk):
+        text = self._buffer + self._decoder.decode(chunk)
+        self._buffer = ""
+        # A CR ending one chunk and an LF starting the next are a single
+        # line break, so the LF must not count as a second one. An empty
+        # chunk carries no text, so it must not clear this.
+        if text:
+            if self._skip_lf and text.startswith("\n"):
+                text = text[1:]
+            self._skip_lf = text.endswith("\r")
+        lines = self._LINE_BREAK.split(text)
+        self._buffer = lines.pop()
+        for line in lines:
+            if not line:
+                self._dispatch()
+            elif line.startswith(":"):
+                continue
+            else:
+                field, _, value = line.partition(":")
+                if field == "data":
+                    self._data.append(value[1:] if value.startswith(" ") else value)
+        # Incomplete events at EOF are discarded, per the SSE spec
+
+    def _dispatch(self):
+        if not self._data:
+            return
+        payload = "\n".join(self._data)
+        self._data = []
+        if not payload:
+            return
+        try:
+            event = json.loads(payload)
+        except json.JSONDecodeError as exc:
+            raise llm.ModelError(f"Invalid JSON in Gemini SSE data: {exc}") from exc
+        if not isinstance(event, dict):
+            raise llm.ModelError("Gemini SSE data must be a JSON object")
+        self._events.append(event)
+
+
+def _response_parser(events, response):
+    if _is_sse(response):
+        return _SSEDecoder(events)
+    # Keep provider metadata JSON-serializable: ijson otherwise parses
+    # fractional values such as grounding confidence scores as Decimal.
+    return ijson.items_coro(events, "item", use_float=True)
+
 
 class GeminiPro(_SharedGemini, llm.KeyModel):
     def execute(self, prompt, stream, response, conversation, key):
@@ -1011,11 +1084,9 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
             json=body,
         ) as http_response:
             events = ijson.sendable_list()
-            # Keep provider metadata JSON-serializable: ijson otherwise parses
-            # fractional values such as grounding confidence scores as Decimal.
-            coro = ijson.items_coro(events, "item", use_float=True)
+            parser = _response_parser(events, http_response)
             for chunk in http_response.iter_bytes():
-                coro.send(chunk)
+                parser.send(chunk)
                 if events:
                     for event in events:
                         if isinstance(event, dict) and "error" in event:
@@ -1028,10 +1099,7 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
                             yield StreamEvent(type="text", chunk="")
                         gathered.append(event)
                     events.clear()
-        response.response_json = gathered[-1]
-        resolved_model = gathered[-1]["modelVersion"]
-        response.set_resolved_model(resolved_model)
-        self.set_usage(response)
+        self._finish(response, gathered)
 
 
 class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
@@ -1049,9 +1117,9 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                 json=body,
             ) as http_response:
                 events = ijson.sendable_list()
-                coro = ijson.items_coro(events, "item", use_float=True)
+                parser = _response_parser(events, http_response)
                 async for chunk in http_response.aiter_bytes():
-                    coro.send(chunk)
+                    parser.send(chunk)
                     if events:
                         for event in events:
                             if isinstance(event, dict) and "error" in event:
@@ -1065,10 +1133,7 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                                 yield StreamEvent(type="text", chunk="")
                             gathered.append(event)
                         events.clear()
-        response.response_json = gathered[-1]
-        resolved_model = gathered[-1]["modelVersion"]
-        response.set_resolved_model(resolved_model)
-        self.set_usage(response)
+        self._finish(response, gathered)
 
 
 @llm.hookimpl
