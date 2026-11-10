@@ -77,6 +77,38 @@ def _supports_server_tool_context(model_id):
     }
 
 
+def _continuation_token(event):
+    """
+    Return the continuation token if this final streamed event shows that the
+    model paused a long output and expects a follow-up request to resume it.
+    """
+    try:
+        candidate = event["candidates"][0]
+    except (KeyError, IndexError, TypeError):
+        return None
+    if candidate.get("finishReason") != "CONTINUATION":
+        return None
+    return candidate.get("continuationToken") or None
+
+
+def _combine_usage(usages):
+    """
+    Combine usageMetadata from each segment of a continued long output.
+
+    TODO: provisional. Follows Google's guidance to sum output counts across
+    segments, and reports the first segment's prompt count as the input.
+    Not yet checked against real multi-segment usage data.
+    """
+    combined = dict(usages[-1])
+    if "promptTokenCount" in usages[0]:
+        combined["promptTokenCount"] = usages[0]["promptTokenCount"]
+    for key in ("candidatesTokenCount", "thoughtsTokenCount"):
+        total = sum(usage.get(key) or 0 for usage in usages)
+        if total:
+            combined[key] = total
+    return combined
+
+
 def _prepare_server_tool_request(model, body):
     if not model.supports_server_tool_context:
         return
@@ -975,6 +1007,25 @@ class _SharedGemini:
 
         yield from events
 
+    def set_response_json(self, response, segments):
+        """
+        Record the final event of the response. segments is the final event
+        from each request - more than one if a long output was resumed using
+        continuation tokens, in which case their usage is combined.
+        """
+        final = segments[-1]
+        response.set_resolved_model(final["modelVersion"])
+        for event in segments:
+            for candidate in event.get("candidates") or []:
+                # These can be hundreds of KB and are useless once consumed
+                candidate.pop("continuationToken", None)
+        if len(segments) > 1:
+            final["usageMetadata"] = _combine_usage(
+                [event.get("usageMetadata") or {} for event in segments]
+            )
+            final["continuationSegments"] = len(segments)
+        response.response_json = final
+
     def set_usage(self, response):
         try:
             # Don't record the "content" key from that last candidate
@@ -1004,74 +1055,88 @@ class _SharedGemini:
 class GeminiPro(_SharedGemini, llm.KeyModel):
     def execute(self, prompt, stream, response, conversation, key):
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model_id}:streamGenerateContent"
-        gathered = []
         body = self.build_request_body(prompt, conversation)
+        segments = []
+        request_body = body
 
-        with httpx.stream(
-            "POST",
-            url,
-            timeout=prompt.options.timeout,
-            headers={"x-goog-api-key": self.get_key(key)},
-            json=body,
-        ) as http_response:
-            events = ijson.sendable_list()
-            # Keep provider metadata JSON-serializable: ijson otherwise parses
-            # fractional values such as grounding confidence scores as Decimal.
-            coro = ijson.items_coro(events, "item", use_float=True)
-            for chunk in http_response.iter_bytes():
-                coro.send(chunk)
-                if events:
-                    for event in events:
-                        if isinstance(event, dict) and "error" in event:
-                            raise llm.ModelError(event["error"]["message"])
-                        try:
-                            yield from self.process_candidates(
-                                event["candidates"], response
-                            )
-                        except KeyError:
-                            yield StreamEvent(type="text", chunk="")
-                        gathered.append(event)
-                    events.clear()
-        response.response_json = gathered[-1]
-        resolved_model = gathered[-1]["modelVersion"]
-        response.set_resolved_model(resolved_model)
-        self.set_usage(response)
-
-
-class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
-    async def execute(self, prompt, stream, response, conversation, key):
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model_id}:streamGenerateContent"
-        gathered = []
-        body = self.build_request_body(prompt, conversation)
-
-        async with httpx.AsyncClient() as client:
-            async with client.stream(
+        while True:
+            gathered = []
+            with httpx.stream(
                 "POST",
                 url,
                 timeout=prompt.options.timeout,
                 headers={"x-goog-api-key": self.get_key(key)},
-                json=body,
+                json=request_body,
             ) as http_response:
                 events = ijson.sendable_list()
+                # Keep provider metadata JSON-serializable: ijson otherwise parses
+                # fractional values such as grounding confidence scores as Decimal.
                 coro = ijson.items_coro(events, "item", use_float=True)
-                async for chunk in http_response.aiter_bytes():
+                for chunk in http_response.iter_bytes():
                     coro.send(chunk)
                     if events:
                         for event in events:
                             if isinstance(event, dict) and "error" in event:
                                 raise llm.ModelError(event["error"]["message"])
                             try:
-                                for stream_event in self.process_candidates(
+                                yield from self.process_candidates(
                                     event["candidates"], response
-                                ):
-                                    yield stream_event
+                                )
                             except KeyError:
                                 yield StreamEvent(type="text", chunk="")
                             gathered.append(event)
                         events.clear()
-        response.response_json = gathered[-1]
-        resolved_model = gathered[-1]["modelVersion"]
-        response.set_resolved_model(resolved_model)
+            segments.append(gathered[-1])
+            continuation_token = _continuation_token(gathered[-1])
+            if continuation_token is None:
+                break
+            request_body = {**body, "continuationToken": continuation_token}
+
+        self.set_response_json(response, segments)
+        self.set_usage(response)
+
+
+class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
+    async def execute(self, prompt, stream, response, conversation, key):
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model_id}:streamGenerateContent"
+        body = self.build_request_body(prompt, conversation)
+        segments = []
+        request_body = body
+
+        async with httpx.AsyncClient() as client:
+            while True:
+                gathered = []
+                async with client.stream(
+                    "POST",
+                    url,
+                    timeout=prompt.options.timeout,
+                    headers={"x-goog-api-key": self.get_key(key)},
+                    json=request_body,
+                ) as http_response:
+                    events = ijson.sendable_list()
+                    coro = ijson.items_coro(events, "item", use_float=True)
+                    async for chunk in http_response.aiter_bytes():
+                        coro.send(chunk)
+                        if events:
+                            for event in events:
+                                if isinstance(event, dict) and "error" in event:
+                                    raise llm.ModelError(event["error"]["message"])
+                                try:
+                                    for stream_event in self.process_candidates(
+                                        event["candidates"], response
+                                    ):
+                                        yield stream_event
+                                except KeyError:
+                                    yield StreamEvent(type="text", chunk="")
+                                gathered.append(event)
+                            events.clear()
+                segments.append(gathered[-1])
+                continuation_token = _continuation_token(gathered[-1])
+                if continuation_token is None:
+                    break
+                request_body = {**body, "continuationToken": continuation_token}
+
+        self.set_response_json(response, segments)
         self.set_usage(response)
 
 
