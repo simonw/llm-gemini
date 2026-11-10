@@ -1001,6 +1001,24 @@ class _SharedGemini:
             pass
 
 
+def _http_error(response):
+    fallback = f"Gemini API error: HTTP {response.status_code}"
+    try:
+        data = response.json()
+    except ValueError:
+        return llm.ModelError(fallback)
+    # Google returns an object for HTTP errors, but can also return an array.
+    if not isinstance(data, list):
+        data = [data]
+    for item in data:
+        error = item.get("error") if isinstance(item, dict) else None
+        if isinstance(error, dict):
+            message = error.get("message")
+            if isinstance(message, str) and message.strip():
+                return llm.ModelError(message)
+    return llm.ModelError(fallback)
+
+
 class GeminiPro(_SharedGemini, llm.KeyModel):
     def execute(self, prompt, stream, response, conversation, key):
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.gemini_model_id}:streamGenerateContent"
@@ -1014,6 +1032,9 @@ class GeminiPro(_SharedGemini, llm.KeyModel):
             headers={"x-goog-api-key": self.get_key(key)},
             json=body,
         ) as http_response:
+            if http_response.is_error:
+                http_response.read()
+                raise _http_error(http_response)
             events = ijson.sendable_list()
             # Keep provider metadata JSON-serializable: ijson otherwise parses
             # fractional values such as grounding confidence scores as Decimal.
@@ -1052,6 +1073,9 @@ class AsyncGeminiPro(_SharedGemini, llm.AsyncKeyModel):
                 headers={"x-goog-api-key": self.get_key(key)},
                 json=body,
             ) as http_response:
+                if http_response.is_error:
+                    await http_response.aread()
+                    raise _http_error(http_response)
                 events = ijson.sendable_list()
                 coro = ijson.items_coro(events, "item", use_float=True)
                 async for chunk in http_response.aiter_bytes():
