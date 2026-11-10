@@ -601,6 +601,11 @@ class _SharedGemini:
                         if part.tool_call_id:
                             function_response["id"] = part.tool_call_id
                         parts.append({"function_response": function_response})
+                        for attachment in part.attachments:
+                            mime_type = resolve_type(attachment)
+                            parts.append(
+                                self._build_attachment_part(attachment, mime_type)
+                            )
                     elif isinstance(part, AttachmentPart) and part.attachment:
                         mime_type = resolve_type(part.attachment)
                         parts.append(
