@@ -52,6 +52,8 @@ result = runner.invoke(cli.cli, ["models", "-q", "gemini/"])
 lines = reversed(result.output.strip().split("\n"))
 to_output = []
 NOTES = {
+    "gemini/gemini-4-carbon": "Gemini 4 Carbon",
+    "gemini/gemini-4-hydrogen": "Gemini 4 Hydrogen",
     "gemini/gemini-4-argon": "Gemini 4 Argon",
     "gemini/gemini-3.8-flash": "Gemini 3.8 Flash",
     "gemini/gemini-3.7-flash": "Gemini 3.7 Flash",
@@ -79,8 +81,8 @@ for line in lines:
     )
 cog.out("\n".join(to_output))
 ]]] -->
-- `gemini/gemini-4-hydrogen`
-- `gemini/gemini-4-carbon`
+- `gemini/gemini-4-hydrogen`: Gemini 4 Hydrogen
+- `gemini/gemini-4-carbon`: Gemini 4 Carbon
 - `gemini/gemini-4-argon`: Gemini 4 Argon
 - `gemini/gemini-3.8-flash`: Gemini 3.8 Flash
 - `gemini/gemini-3.7-flash`: Gemini 3.7 Flash
