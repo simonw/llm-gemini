@@ -56,6 +56,7 @@ GOOGLE_SEARCH_MODELS = {
     "gemini-3.5-flash-lite",
     "gemini-4-argon",
     "gemini-4-carbon",
+    "gemini-4-hydrogen",
 }
 
 
@@ -171,6 +172,7 @@ MODEL_THINKING_LEVELS = {
     "gemini-3.5-flash-lite": ["minimal", "low", "medium", "high"],
     "gemini-4-argon": ["low", "medium", "high"],
     "gemini-4-carbon": ["low", "medium", "high"],
+    "gemini-4-hydrogen": ["low", "medium", "high"],
 }
 
 
@@ -254,6 +256,8 @@ def register_models(register):
         "gemini-4-argon",
         # 10th November 2026
         "gemini-4-carbon",
+        # 12th November 2026
+        "gemini-4-hydrogen",
     ):
         can_google_search = model_id in GOOGLE_SEARCH_MODELS
         can_url_context = _supports_url_context(model_id)
