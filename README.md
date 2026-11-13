@@ -41,6 +41,30 @@ llm models default gemini-flash-latest
 llm "A joke about a pelican and a walrus"
 ```
 
+## Reverse proxies
+
+Set `LLM_GEMINI_API_BASE` to route requests through an API root:
+
+```bash
+export LLM_GEMINI_API_BASE='https://proxy.example/google'
+llm -m gemini-flash-latest 'Hello'
+```
+
+This sends generation requests to `https://proxy.example/google/v1beta/models/gemini-flash-latest:streamGenerateContent`. A root that already ends in `/v1beta` is also supported. Generation, embeddings, and the `llm gemini models` and `files` commands use this root.
+
+For a proxy with a different model-resource path, set `LLM_GEMINI_ENDPOINT`:
+
+```bash
+export LLM_GEMINI_ENDPOINT='https://proxy.example/team/{model}?tenant=example'
+llm -m gemini-flash-latest --async 'Hello'
+```
+
+The optional `{model}` placeholder is replaced with the selected model name. The plugin appends the operation suffix, such as `:streamGenerateContent` or `:batchEmbedContents`, before the query string. You can also use a literal model-resource address, such as `https://proxy.example/team/fixed-model`; it fixes the destination resource, so choose the corresponding model or use the placeholder when switching models.
+
+`LLM_GEMINI_ENDPOINT` takes precedence for generation and embedding requests. The model and file directories use `LLM_GEMINI_API_BASE`. Paths and query parameters supplied by the proxy are preserved; trailing slashes are normalized.
+
+The configured destination receives the selected Gemini API key using the existing authentication scheme. Both settings require an absolute HTTP(S) address without URL credentials or a fragment. The proxy must return the existing Gemini streaming JSON format. When these variables are unset, requests use the standard Google endpoint.
+
 ## Available models
 
 <!-- [[[cog
