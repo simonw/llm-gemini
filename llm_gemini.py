@@ -173,8 +173,8 @@ MODEL_THINKING_LEVELS = {
     "gemini-3.5-flash-lite": ["minimal", "low", "medium", "high"],
     "gemini-4-argon": ["low", "medium", "high"],
     "gemini-4-carbon": ["low", "medium", "high"],
-    "gemini-4-hydrogen": ["low", "medium", "high"],
-    "gemini-4-neon": ["low", "medium", "high"],
+    "gemini-4-hydrogen": ["low", "medium", "high", "xhigh"],
+    "gemini-4-neon": ["low", "medium", "high", "xhigh"],
 }
 
 
