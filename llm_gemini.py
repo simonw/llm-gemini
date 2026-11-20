@@ -387,6 +387,8 @@ def _resolve_refs(schema, defs, expansion_stack=None):
                     expansion_stack.append(def_name)
                     # Replace the $ref with the actual definition
                     resolved = copy.deepcopy(defs[def_name])
+                    if "description" in schema:
+                        resolved.pop("description", None)
                     schema.update(resolved)
                     # Resolve any nested refs in the newly added definition
                     _resolve_refs(schema, defs, expansion_stack)

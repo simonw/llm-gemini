@@ -403,6 +403,24 @@ def test_cleanup_schema_with_refs(schema, expected):
     assert result == expected
 
 
+def test_cleanup_schema_keeps_field_descriptions_on_shared_refs():
+    class Address(BaseModel):
+        """A postal address."""
+
+        city: str
+
+    class Shipment(BaseModel):
+        origin: Address = pydantic.Field(description="Where to collect the package.")
+        destination: Address = pydantic.Field(description="Where to deliver the package.")
+        billing: Address
+
+    properties = cleanup_schema(Shipment.model_json_schema())["properties"]
+    assert properties["origin"]["description"] == "Where to collect the package."
+    assert properties["destination"]["description"] == "Where to deliver the package."
+    assert properties["billing"]["description"] == "A postal address."
+    assert all("city" in field["properties"] for field in properties.values())
+
+
 def test_recursive_schema_raises_error():
     """Test that recursive self-referential schemas raise a descriptive error."""
     # Simulate a recursive Node class: Node has a field 'next' that references Node
