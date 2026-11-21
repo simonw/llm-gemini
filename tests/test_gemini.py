@@ -1,4 +1,6 @@
 from click.testing import CliRunner
+import copy
+import httpx
 import llm
 from llm.cli import cli
 from llm.parts import StreamEvent
@@ -401,6 +403,135 @@ def test_cleanup_schema_with_refs(schema, expected):
 
     result = cleanup_schema(copy.deepcopy(schema))
     assert result == expected
+
+
+@pytest.fixture
+def property_keyword_schema():
+    class Leaf(BaseModel):
+        value: int
+
+    class Keywords(BaseModel):
+        reference: Leaf = pydantic.Field(alias="$ref")
+        definitions: list[Leaf] = pydantic.Field(alias="$defs")
+        named_properties: Leaf = pydantic.Field(alias="properties")
+        title: str
+
+    class Envelope(BaseModel):
+        payload: Keywords
+
+    leaf = {
+        "type": "object",
+        "title": "Leaf",
+        "properties": {"value": {"type": "integer", "title": "Value"}},
+        "required": ["value"],
+    }
+    expected = {
+        "type": "object",
+        "properties": {
+            "payload": {
+                "type": "object",
+                "title": "Keywords",
+                "properties": {
+                    "$ref": leaf,
+                    "$defs": {
+                        "type": "array",
+                        "title": "$Defs",
+                        "items": leaf,
+                    },
+                    "properties": leaf,
+                    "title": {"type": "string", "title": "Title"},
+                },
+                "required": ["$ref", "$defs", "properties", "title"],
+            }
+        },
+        "required": ["payload"],
+    }
+    return Envelope.model_json_schema(), expected
+
+
+def test_cleanup_schema_property_keywords(property_keyword_schema):
+    schema, expected = property_keyword_schema
+    assert cleanup_schema(copy.deepcopy(schema)) == expected
+
+
+def test_cleanup_schema_literal_defs_property():
+    schema = {
+        "type": "object",
+        "properties": {"$defs": {"type": "string"}},
+        "required": ["$defs"],
+    }
+    assert cleanup_schema(copy.deepcopy(schema)) == schema
+
+
+def test_cleanup_schema_nested_defs_in_property_schema():
+    schema = {
+        "type": "object",
+        "properties": {
+            "properties": {
+                "$defs": {"Value": {"type": "integer"}},
+                "$ref": "#/$defs/Value",
+                "title": "Keep this title",
+                "additionalProperties": False,
+            }
+        },
+    }
+    assert cleanup_schema(schema) == {
+        "type": "object",
+        "properties": {
+            "properties": {
+                "type": "integer",
+                "title": "Keep this title",
+                "additionalProperties": False,
+            }
+        },
+    }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("is_async", [False, True], ids=["sync", "async"])
+@pytest.mark.parametrize("schema_kind", ["response", "tool"])
+async def test_property_keywords_in_request(
+    property_keyword_schema, monkeypatch, is_async, schema_kind
+):
+    schema, expected = property_keyword_schema
+    original = copy.deepcopy(schema)
+    tool = llm.Tool(name="save_payload", input_schema=schema)
+    bodies = []
+
+    def handle(request):
+        bodies.append(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "candidates": [{"content": {"parts": [{"text": "ok"}]}}],
+                    "modelVersion": "gemini-flash-latest",
+                }
+            ],
+        )
+
+    transport = httpx.MockTransport(handle)
+    async_client = httpx.AsyncClient
+    monkeypatch.setattr(httpx, "AsyncClient", lambda: async_client(transport=transport))
+    with httpx.Client(transport=transport) as client:
+        monkeypatch.setattr(httpx, "stream", client.stream)
+        get_model = llm.get_async_model if is_async else llm.get_model
+        model = get_model("gemini-flash-latest")
+        kwargs = {"schema": schema} if schema_kind == "response" else {"tools": [tool]}
+        response = model.prompt("Return a payload", key="test-key", **kwargs)
+        text = await response.text() if is_async else response.text()
+
+    assert text == "ok"
+    assert len(bodies) == 1
+    if schema_kind == "response":
+        assert bodies[0]["generationConfig"]["response_schema"] == expected
+        assert response.prompt.schema == original
+    else:
+        declaration = bodies[0]["tools"][0]["functionDeclarations"][0]
+        assert declaration["name"] == "save_payload"
+        assert declaration["parameters"] == expected
+        assert tool.input_schema == original
+    assert schema == original
 
 
 def test_recursive_schema_raises_error():
