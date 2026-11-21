@@ -1390,3 +1390,216 @@ def test_google_search_grounding_metadata_is_raw_and_text_is_unchanged():
     assert events[0].type == "text"
     assert events[0].chunk == "Pelicans live worldwide."
     assert events[0].provider_metadata == {"gemini": {"groundingMetadata": grounding}}
+
+
+@pytest.fixture
+def system_history_requests(monkeypatch):
+    """Capture real REST bodies while returning synthetic Gemini responses."""
+    from contextlib import contextmanager
+    from functools import partial
+
+    import httpx
+
+    requests = []
+
+    def handle(request):
+        assert request.method == "POST"
+        assert request.url.path.endswith(":streamGenerateContent")
+        requests.append(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "candidates": [
+                        {
+                            "content": {
+                                "role": "model",
+                                "parts": [{"text": "Synthetic answer"}],
+                            },
+                            "finishReason": "STOP",
+                        }
+                    ],
+                    "modelVersion": "gemini-2.5-flash",
+                }
+            ],
+        )
+
+    transport = httpx.MockTransport(handle)
+
+    @contextmanager
+    def stream(*args, **kwargs):
+        with (
+            httpx.Client(transport=transport) as client,
+            client.stream(*args, **kwargs) as response,
+        ):
+            yield response
+
+    monkeypatch.setattr(httpx, "stream", stream)
+    monkeypatch.setattr(
+        httpx, "AsyncClient", partial(httpx.AsyncClient, transport=transport)
+    )
+    return requests
+
+
+def assert_system_history_requests(requests, expected):
+    assert [body.get("systemInstruction") for body in requests] == [
+        {"parts": [{"text": text}]} for text in expected
+    ]
+    assert requests[0]["contents"] == [
+        {"role": "user", "parts": [{"text": "First question"}]}
+    ]
+    assert requests[1]["contents"] == requests[0]["contents"] + [
+        {"role": "model", "parts": [{"text": "Synthetic answer"}]},
+        {"role": "user", "parts": [{"text": "Follow up"}]},
+    ]
+
+
+@pytest.mark.parametrize("continuation", ["conversation", "reply", "override"])
+def test_system_history_sync(system_history_requests, continuation):
+    model = llm.get_model("gemini-2.5-flash")
+    conversation = model.conversation()
+    first = conversation.prompt(
+        "First question",
+        system="Be concise",
+        system_fragments=["Use plain language"],
+        key=GEMINI_API_KEY,
+    )
+    first.text()
+    original = [message.to_dict() for message in first.prompt.messages]
+    kwargs = {"key": GEMINI_API_KEY}
+    if continuation == "override":
+        kwargs.update(system="Use detail", system_fragments=["New instructions"])
+    if continuation == "reply":
+        second = first.reply("Follow up", **kwargs)
+    else:
+        second = conversation.prompt("Follow up", **kwargs)
+    second.text()
+
+    assert first.prompt.messages[0].role == "system"
+    assert second.prompt.messages[0] == first.prompt.messages[0]
+    assert [message.to_dict() for message in first.prompt.messages] == original
+    expected = "Use plain language\n\nBe concise"
+    assert_system_history_requests(
+        system_history_requests,
+        [
+            expected,
+            (
+                "New instructions\n\nUse detail"
+                if continuation == "override"
+                else expected
+            ),
+        ],
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("continuation", ["conversation", "reply", "override"])
+async def test_system_history_async(system_history_requests, continuation):
+    model = llm.get_async_model("gemini-2.5-flash")
+    conversation = model.conversation()
+    first = await conversation.prompt(
+        "First question",
+        system="Be concise",
+        system_fragments=["Use plain language"],
+        key=GEMINI_API_KEY,
+    )
+    original = [message.to_dict() for message in first.prompt.messages]
+    kwargs = {"key": GEMINI_API_KEY}
+    if continuation == "override":
+        kwargs.update(system="Use detail", system_fragments=["New instructions"])
+    if continuation == "reply":
+        second = await first.reply("Follow up", **kwargs)
+    else:
+        second = conversation.prompt("Follow up", **kwargs)
+    await second.text()
+
+    assert first.prompt.messages[0].role == "system"
+    assert second.prompt.messages[0] == first.prompt.messages[0]
+    assert [message.to_dict() for message in first.prompt.messages] == original
+    expected = "Use plain language\n\nBe concise"
+    assert_system_history_requests(
+        system_history_requests,
+        [
+            expected,
+            (
+                "New instructions\n\nUse detail"
+                if continuation == "override"
+                else expected
+            ),
+        ],
+    )
+
+
+@pytest.mark.parametrize("async_mode", [False, True], ids=["sync", "async"])
+@pytest.mark.asyncio
+async def test_system_history_explicit_messages(system_history_requests, async_mode):
+    from llm.parts import ReasoningPart, TextPart
+
+    messages = [
+        llm.system("First instruction", TextPart(text=""), "Second instruction"),
+        llm.system(ReasoningPart(text="Not a text instruction"), "Third instruction"),
+        llm.user("First question"),
+        llm.system("Do not hoist this later instruction"),
+    ]
+    original = [message.to_dict() for message in messages]
+    model = (llm.get_async_model if async_mode else llm.get_model)("gemini-2.5-flash")
+    response = model.prompt(messages=messages, key=GEMINI_API_KEY)
+    if async_mode:
+        await response.text()
+    else:
+        response.text()
+
+    assert [message.to_dict() for message in messages] == original
+    assert response.prompt.messages == messages
+    assert system_history_requests[0]["contents"] == [
+        {"role": "user", "parts": [{"text": "First question"}]}
+    ]
+    assert system_history_requests[0].get("systemInstruction") == {
+        "parts": [
+            {"text": "First instruction\n\nSecond instruction\n\nThird instruction"}
+        ]
+    }
+
+
+@pytest.mark.parametrize(
+    "messages",
+    [
+        [llm.user("First question")],
+        [llm.user("First question"), llm.system("Do not hoist")],
+        [llm.system(""), llm.user("First question"), llm.system("Do not hoist")],
+    ],
+    ids=["no-system", "later-system", "empty-leading-system"],
+)
+def test_system_history_no_hoisting(system_history_requests, messages):
+    response = llm.get_model("gemini-2.5-flash").prompt(
+        messages=messages, key=GEMINI_API_KEY
+    )
+    response.text()
+
+    assert "systemInstruction" not in system_history_requests[0]
+    assert system_history_requests[0]["contents"] == [
+        {"role": "user", "parts": [{"text": "First question"}]}
+    ]
+
+
+@pytest.mark.parametrize("system", [None, "Legacy instruction"])
+def test_system_history_legacy_prompt(system):
+    from types import SimpleNamespace
+
+    model = llm.get_model("gemini-2.5-flash")
+    prompt = SimpleNamespace(
+        prompt="First question",
+        system=system,
+        attachments=[],
+        tools=[],
+        schema=None,
+        tool_results=[],
+        options=model.Options(),
+    )
+    body = model.build_request_body(prompt, None)
+
+    assert body["contents"] == [{"role": "user", "parts": [{"text": "First question"}]}]
+    if system:
+        assert body["systemInstruction"] == {"parts": [{"text": system}]}
+    else:
+        assert "systemInstruction" not in body
