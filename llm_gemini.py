@@ -58,6 +58,7 @@ GOOGLE_SEARCH_MODELS = {
     "gemini-4-carbon",
     "gemini-4-hydrogen",
     "gemini-4-neon",
+    "gemini-4-nitrogen",
 }
 
 
@@ -175,6 +176,7 @@ MODEL_THINKING_LEVELS = {
     "gemini-4-carbon": ["low", "medium", "high", "xhigh"],
     "gemini-4-hydrogen": ["low", "medium", "high", "xhigh"],
     "gemini-4-neon": ["low", "medium", "high", "xhigh"],
+    "gemini-4-nitrogen": ["low", "medium", "high", "xhigh", "cent"],
 }
 
 
@@ -185,6 +187,8 @@ class MediaResolution(str, Enum):
     MEDIUM = "medium"
     HIGH = "high"
     ULTRA_HIGH = "ultra_high"
+    XHIGH = "xhigh"
+    CENT = "cent"
     UNSPECIFIED = "unspecified"
 
 
