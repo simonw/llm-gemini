@@ -1,4 +1,6 @@
 from click.testing import CliRunner
+import gzip
+import httpx
 import llm
 from llm.cli import cli
 from llm.parts import StreamEvent
@@ -7,9 +9,11 @@ import os
 import pytest
 import pydantic
 from pydantic import BaseModel
+from pathlib import Path
 import sys
 from typing import List, Optional
 from llm_gemini import cleanup_schema, is_youtube_url
+import yaml
 
 GEMINI_API_KEY = os.environ.get("PYTEST_GEMINI_API_KEY", None) or "gm-..."
 
@@ -627,31 +631,56 @@ def test_nested_model_deep_composition():
             assert "quantity" in item
 
 
-@pytest.mark.vcr
 def test_cli_gemini_models(tmpdir, monkeypatch):
     user_dir = tmpdir / "llm.datasette.io"
     user_dir.mkdir()
     monkeypatch.setenv("LLM_USER_PATH", str(user_dir))
-    # With no key set should error nicely
-    runner = CliRunner()
-    result = runner.invoke(cli, ["gemini", "models"])
-    assert result.exit_code == 1
-    assert (
-        "Error: You must set the LLM_GEMINI_KEY environment variable or use --key\n"
-        == result.output
+    # The existing cassette contains only the first page, with a nextPageToken.
+    # Replay that recorded JSON and mock the later page without recording an API call.
+    cassette_path = (
+        Path(__file__).parent / "cassettes/test_gemini/test_cli_gemini_models.yaml"
     )
-    # Try again with --key
-    result2 = runner.invoke(cli, ["gemini", "models", "--key", GEMINI_API_KEY])
-    assert result2.exit_code == 0
-    assert "gemini-3.6-flash" in result2.output
-    # And with --method
-    result3 = runner.invoke(
-        cli, ["gemini", "models", "--key", GEMINI_API_KEY, "--method", "embedContent"]
+    cassette = yaml.safe_load(cassette_path.read_text())
+    first_page = json.loads(
+        gzip.decompress(cassette["interactions"][0]["response"]["body"]["string"])
     )
-    assert result3.exit_code == 0
-    models = json.loads(result3.output)
-    for model in models:
-        assert "embedContent" in model["supportedGenerationMethods"]
+    later_model = {
+        "name": "models/test-later-embedding",
+        "supportedGenerationMethods": ["embedContent"],
+    }
+
+    def handle(request):
+        page_token = request.url.params.get("pageToken")
+        if page_token is None:
+            return httpx.Response(200, json=first_page)
+        assert page_token == first_page["nextPageToken"]
+        return httpx.Response(200, json={"models": [later_model]})
+
+    with httpx.Client(transport=httpx.MockTransport(handle)) as client:
+        monkeypatch.setattr("llm_gemini.httpx.get", client.get)
+        # With no key set should error nicely
+        runner = CliRunner()
+        result = runner.invoke(cli, ["gemini", "models"])
+        assert result.exit_code == 1
+        assert (
+            "Error: You must set the LLM_GEMINI_KEY environment variable or use --key\n"
+            == result.output
+        )
+        # Try again with --key
+        result2 = runner.invoke(cli, ["gemini", "models", "--key", GEMINI_API_KEY])
+        assert result2.exit_code == 0
+        assert "gemini-3.6-flash" in result2.output
+        assert later_model in json.loads(result2.output)
+        # And with --method
+        result3 = runner.invoke(
+            cli,
+            ["gemini", "models", "--key", GEMINI_API_KEY, "--method", "embedContent"],
+        )
+        assert result3.exit_code == 0
+        models = json.loads(result3.output)
+        assert later_model in models
+        for model in models:
+            assert "embedContent" in model["supportedGenerationMethods"]
 
 
 @pytest.mark.vcr
